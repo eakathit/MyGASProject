@@ -15,21 +15,24 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-// ตรวจสอบ login
+// ฟังก์ชันตรวจสอบ login
 function checkLogin(username, password) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('employees');
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("employees");
   const data = sheet.getDataRange().getValues();
 
-  for (let i = 0; i < data.length; i++) { // เริ่ม i=0 ถ้าไม่มี header
+  for (let i = 1; i < data.length; i++) { // ข้าม header
     const row = data[i];
-    Logger.log('Row:', row[0], row[1], 'Input:', username, password);
     if (row[0].toString().trim() === username.trim() && row[1].toString().trim() === password.trim()) {
-      Logger.log('Login success:', row[0]);
-      return { success: true, role: row[2], username: row[0] };
+      return { success: true, username: row[0], role: row[2] };
     }
   }
-  Logger.log('Login failed:', username);
   return { success: false };
 }
 
+// ฟังก์ชันบันทึกเช็คอิน / เช็คเอาท์
+function recordCheckIn(nickname, status) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
+  sheet.appendRow([new Date(), nickname, status]);
+  return true;
+}
 
