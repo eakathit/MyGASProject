@@ -384,7 +384,7 @@
         // Global State
         let currentUser = null;
         let isCheckedIn = false;
-        let isOnsite = false;
+        let isOnsite = true;
 
         // Initialize App
         function initApp() {
@@ -424,9 +424,10 @@
         google.script.run.withSuccessHandler(function(response) {
             console.log('Response:', response); // debug ดูค่า
 
-            if (response.success) {
+            if (response && response.success) {
                 // เก็บ user ไว้ใน state
-                currentUser = response; // { success: true, username: "Aum", role: "staff" }
+                currentUser = response; 
+                // ตัวอย่าง response: { success: true, employeeId: "Aum", role: "staff" }
 
                 // ซ่อนหน้า login
                 document.getElementById('loginPage').classList.add('hidden');
@@ -435,7 +436,7 @@
                 const mainApp = document.getElementById('mainApp');
                 mainApp.classList.remove('hidden');
 
-                showNotification(`เข้าสู่ระบบสำเร็จ!`);
+                showNotification(`เข้าสู่ระบบสำเร็จ! สวัสดีคุณ ${currentUser.employeeId}`);
             } else {
                 const errorDiv = document.getElementById('error');
                 if (errorDiv) errorDiv.innerText = 'รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง';
@@ -443,16 +444,16 @@
         }).checkLogin(employeeId, password);
     }
 
-// ฟังก์ชัน Logout
-function logout() {
-    currentUser = null;
-    document.getElementById('loginPage').classList.remove('hidden');
-    document.getElementById('mainApp').classList.add('hidden');
-    showNotification("ออกจากระบบแล้ว");
-}
+      // ฟังก์ชัน Logout
+      function logout() {
+          currentUser = null;
+          document.getElementById('loginPage').classList.remove('hidden');
+          document.getElementById('mainApp').classList.add('hidden');
+          showNotification("ออกจากระบบแล้ว");
+      }
 
-// Tab Navigation
-function showTab(tabName) {
+    // Tab Navigation
+    function showTab(tabName) {
     // ซ่อนทุก tab content
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.add('hidden');
@@ -521,24 +522,33 @@ function showTab(tabName) {
         }
         // Check In
         function checkIn() {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('th-TH');
-
-        isCheckedIn = true;
-        document.getElementById('checkinBtn').disabled = true;
-        document.getElementById('checkinBtn').classList.add('opacity-50');
-        document.getElementById('checkoutBtn').disabled = false;
-        document.getElementById('checkoutBtn').classList.remove('opacity-50');
-
-        // เพิ่ม record ในตาราง UI
-        addTodayRecord(timeString, 'เช็คอิน', isOnsite ? 'Onsite' : 'โรงงาน', 'ปกติ');
-
-        // ส่งข้อมูลไปบันทึกใน Google Sheets
-        google.script.run.withSuccessHandler(() => {
-            showNotification('เช็คอินสำเร็จ! ส่งแจ้งเตือนไปยัง LINE และ Email แล้ว');
-        })
-        .recordCheckIn(currentUser.employeeId, timeString, isOnsite ? 'Onsite' : 'โรงงาน', 'ปกติ');
+    if (!currentUser) {
+        showNotification("กรุณาเข้าสู่ระบบก่อนเช็คอิน");
+        return;
     }
+
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('th-TH');
+
+    isCheckedIn = true;
+    document.getElementById('checkinBtn').disabled = true;
+    document.getElementById('checkinBtn').classList.add('opacity-50');
+    document.getElementById('checkoutBtn').disabled = false;
+    document.getElementById('checkoutBtn').classList.remove('opacity-50');
+
+    // เพิ่ม record ในตาราง UI
+    addTodayRecord(timeString, 'เช็คอิน', isOnsite ? 'Onsite' : 'โรงงาน', 'ปกติ');
+
+    // ส่งข้อมูลไปบันทึกใน Google Sheets
+    google.script.run.withSuccessHandler(() => {
+        showNotification('เช็คอินสำเร็จ! ส่งแจ้งเตือนไปยัง LINE และ Email แล้ว');
+    }).recordCheckIn(
+        currentUser.employeeId,              // ✅ ใช้ employeeId จาก currentUser
+        timeString,
+        isOnsite ? 'Onsite' : 'โรงงาน',
+        'ปกติ'
+    );
+}
 
         // Check Out
         function checkOut() {

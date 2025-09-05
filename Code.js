@@ -22,17 +22,31 @@ function checkLogin(username, password) {
 
   for (let i = 1; i < data.length; i++) { // ข้าม header
     const row = data[i];
-    if (row[0].toString().trim() === username.trim() && row[1].toString().trim() === password.trim()) {
-      return { success: true, username: row[0], role: row[2] };
+    if (row[0].toString().trim() === username.trim() &&
+        row[1].toString().trim() === password.trim()) {
+      return {
+        success: true,
+        employeeId: row[0],   // ✅ เพิ่ม employeeId
+        username: row[0],     // ชื่อเล่น / username
+        role: row[2]          // สิทธิ์
+      };
     }
   }
   return { success: false };
 }
 
 // ฟังก์ชันบันทึกเช็คอิน / เช็คเอาท์
-function recordCheckIn(nickname, status) {
+function recordCheckIn(employeeId, time, location, status) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
-  sheet.appendRow([new Date(), nickname, status]);
+  // บันทึกข้อมูลครบ 4 ช่อง
+  sheet.appendRow([
+    employeeId,                         // คอลัมน์ employeeId
+    new Date(),                         // คอลัมน์ time (timestamp)
+    location,                           // คอลัมน์ location
+    status                              // คอลัมน์ status
+  ]);
+  
   return true;
 }
+
 
