@@ -526,7 +526,7 @@
         }
         // Check In
         function checkIn() {
-    if (!currentUser) {
+      if (!currentUser) {
         showNotification("กรุณาเข้าสู่ระบบก่อนเช็คอิน");
         return;
     }
@@ -545,14 +545,15 @@
 
     // ส่งข้อมูลไปบันทึกใน Google Sheets
     google.script.run.withSuccessHandler(() => {
-        showNotification('เช็คอินสำเร็จ! ส่งแจ้งเตือนไปยัง LINE และ Email แล้ว');
+        showNotification('เช็คอินสำเร็จ!');
     }).recordCheckIn(
-        currentUser.employeeId,              // ✅ ใช้ employeeId จาก currentUser
+        currentUser.employeeId,
         timeString,
         isOnsite ? 'Onsite' : 'โรงงาน',
-        'ปกติ'
-    );
-}
+        'เช็คอิน',    // action
+        'ปกติ'       // status
+      );
+  }
 
         // Check Out
         function checkOut() {
@@ -568,40 +569,48 @@
             // Add record to today's table
             addTodayRecord(timeString, 'เช็คเอาท์', isOnsite ? 'Onsite' : 'โรงงาน', 'ปกติ');
             
-            showNotification('เช็คเอาท์สำเร็จ! ส่งแจ้งเตือนไปยัง LINE และ Email แล้ว');
+            google.script.run.withSuccessHandler(() => {
+              showNotification('เช็คเอาท์สำเร็จ!');
+          }).recordCheckIn(
+              currentUser.employeeId,
+              timeString,
+              isOnsite ? 'Onsite' : 'โรงงาน',
+              'เช็คเอาท์',  // action
+              'ปกติ'        // status
+          );
         }
 
         // Add Today Record
         function addTodayRecord(time, type, location, status) {
-    const tbody = document.getElementById('todayRecords');
+        const tbody = document.getElementById('todayRecords');
 
-    // ลบ template ว่างถ้ามี
-    if (tbody.children.length === 1 && tbody.children[0].querySelector('td').textContent.trim() === '') {
-        tbody.innerHTML = '';
-    }
+        // ลบ template ว่างถ้ามี
+        if (tbody.children.length === 1 && tbody.children[0].querySelector('td').textContent.trim() === '') {
+            tbody.innerHTML = '';
+        }
 
-    const row = document.createElement('tr');
-    row.className = 'border-b border-gray-100';
+        const row = document.createElement('tr');
+        row.className = 'border-b border-gray-100';
 
-    const typeClass = type === 'เช็คอิน' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+        const typeClass = type === 'เช็คอิน' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
 
-    row.innerHTML = `
-        <td class="py-3 px-4 text-gray-900">${time}</td>
-        <td class="py-3 px-4">
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${typeClass}">
-                ${type}
-            </span>
-        </td>
-        <td class="py-3 px-4 text-gray-600">${location}</td>
-        <td class="py-3 px-4">
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                ${status}
-            </span>
-        </td>
-    `;
+        row.innerHTML = `
+            <td class="py-3 px-4 text-gray-900">${time}</td>
+            <td class="py-3 px-4">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${typeClass}">
+                    ${type}
+                </span>
+            </td>
+            <td class="py-3 px-4 text-gray-600">${location}</td>
+            <td class="py-3 px-4">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    ${status}
+                </span>
+            </td>
+        `;
 
-    // แทรกบนสุดของตาราง
-    tbody.prepend(row);
+        // แทรกบนสุดของตาราง
+        tbody.prepend(row);
 }
 
         // Save Draft Report
