@@ -42,7 +42,7 @@
 
 <body class="bg-gray-50 min-h-screen">
   <!-- Navigation -->
-  <nav class="bg-white shadow-sm border-b border-gray-200">
+  <nav id="usernav" class="hidden bg-white shadow-sm border-b border-gray-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-16">
         <div class="flex items-center">
@@ -51,7 +51,7 @@
           </div>
         </div>
         <div class="flex items-center space-x-4">
-          <span class="text-sm text-gray-600" id="currentUser">พนักงาน: สมชาย ใจดี</span>
+          <span class="text-sm text-gray-600" id="currentUser"></span>
           <button onclick="logout()" class="text-sm text-blue-600 hover:text-blue-800">ออกจากระบบ</button>
         </div>
       </div>
@@ -436,7 +436,11 @@
                 const mainApp = document.getElementById('mainApp');
                 mainApp.classList.remove('hidden');
 
-                showNotification(`เข้าสู่ระบบสำเร็จ! สวัสดีคุณ ${currentUser.employeeId}`);
+                document.getElementById('currentUser').innerText = `พนักงาน: ${currentUser.employeeId}`;
+
+                document.getElementById('usernav').classList.remove('hidden')
+
+                showNotification(`เข้าสู่ระบบสำเร็จ!`);
             } else {
                 const errorDiv = document.getElementById('error');
                 if (errorDiv) errorDiv.innerText = 'รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง';
