@@ -687,10 +687,24 @@ function stopWatchingPosition() {
 
 // Check In
 function checkIn() {
-    const { latitude, longitude } = lastPosition || { latitude: factoryLat, longitude: factoryLng };
+    const { lat, lng } = lastPosition || { lat: factoryLat, lng: factoryLng };
 
     const now = new Date();
     addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คอิน', 'โรงงาน', 'ปกติ');
+
+    // ปิดปุ่มเช็คอิน
+    const checkinBtn = document.getElementById('checkinBtn');
+    if (checkinBtn) {
+        checkinBtn.disabled = true;
+        checkinBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    // เปิดปุ่มเช็คเอาท์
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) {
+        checkoutBtn.disabled = false;
+        checkoutBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
 
     google.script.run.withSuccessHandler(() => showNotification('เช็คอินสำเร็จ!'))
         .recordCheckIn(
@@ -701,11 +715,18 @@ function checkIn() {
         );
 }
 
-// ฟังก์ชันเช็คเอาท์
 function checkOut() {
-    const { latitude, longitude } = lastPosition || { latitude: factoryLat, longitude: factoryLng };
+    const { lat, lng } = lastPosition || { lat: factoryLat, longitude: factoryLng };
+
     const now = new Date();
     addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', 'โรงงาน', 'ปกติ');
+
+    // ปิดปุ่มเช็คเอาท์
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) {
+        checkoutBtn.disabled = true;
+        checkoutBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
 
     google.script.run.withSuccessHandler(() => showNotification('เช็คเอาท์สำเร็จ!'))
         .recordCheckOut(
@@ -720,7 +741,6 @@ function checkOut() {
           feather.replace();
           startWatchingPosition(); // เริ่มติดตาม GPS เมื่อโหลดหน้า
       });
-
 
 
         // Add Today Record

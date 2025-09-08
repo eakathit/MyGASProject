@@ -27,7 +27,7 @@ function checkLogin(username, password) {
   return { success: false };
 }
 
-function recordCheckIn(employeeId, location, action, status, lat, lng, isOnsite) { 
+function recordCheckIn(employeeId, location, action, status) { 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
 
     const now = new Date();
@@ -43,6 +43,21 @@ function recordCheckIn(employeeId, location, action, status, lat, lng, isOnsite)
     return true;
 }
 
+function recordCheckOut(employeeId, location, action, status){
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
+  
+  const now = new Date();
+  const thailandTime = Utilities.formatDate(now, "GMT+7", "yyyy-MM-dd HH:mm:ss");
+  
+  sheet.appendRow ([
+    employeeId,
+    thailandTime,
+    location,
+    action,
+    status
+  ]);
+  return true;
+}
 
 
 
