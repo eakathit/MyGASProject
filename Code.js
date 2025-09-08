@@ -12,37 +12,41 @@ function getPage(pageName) {
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
+
 // ฟังก์ชันตรวจสอบ login
 function checkLogin(username, password) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("employees");
   const data = sheet.getDataRange().getValues();
 
-  for (let i = 1; i < data.length; i++) { // ข้าม header
+  for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    if (row[0].toString().trim() === username.trim() &&
-        row[1].toString().trim() === password.trim()) {
-      return {
-        success: true,
-        employeeId: row[0],   // เพิ่ม employeeId
-        username: row[0],     // ชื่อเล่น / username
-        role: row[2]          // สิทธิ์
-      };
+    if (row[0].toString().trim() === username.trim() && row[1].toString().trim() === password.trim()) {
+      return { success: true, username: row[0], employeeId: row[0], role: row[2] };
     }
   }
   return { success: false };
 }
-// ฟังก์ชันบันทึกเช็คอิน / เช็คเอาท์
-function recordCheckIn(employeeId, time, location, action, status) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
-  // บันทึกข้อมูลครบ 4 ช่อง
-  sheet.appendRow([
-    employeeId,                         // คอลัมน์ employeeId
-    new Date(),                         // คอลัมน์ time (timestamp)
-    location,                           // คอลัมน์ location
-    action,                             // คอลัมน์ Action
-    status                              // คอลัมน์ status
-  ]);
-  
-  return true;
+
+function recordCheckIn(employeeId, location, action, status, lat, lng, isOnsite) { 
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
+
+    const now = new Date();
+    const thailandTime = Utilities.formatDate(now, "GMT+7", "yyyy-MM-dd HH:mm:ss");
+
+    sheet.appendRow([
+        employeeId,
+        thailandTime,
+        location,
+        action,
+        status,
+        lat || 0,
+        lng || 0,
+        isOnsite
+    ]);
+    return true;
 }
+
+
+
+
 

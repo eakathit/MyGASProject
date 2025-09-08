@@ -123,13 +123,13 @@
               <div class="text-lg text-gray-600 mb-6" id="currentDate"></div>
 
               <!-- Location Status -->
-              <div class="mb-6">
-                <div id="locationStatus"
-                  class="inline-flex items-center px-4 py-2 rounded-full text-white font-medium status-in-factory">
-                  <i data-feather="map-pin" class="w-4 h-4 mr-2"></i>
-                  อยู่ในโรงงาน
+            <div class="mb-6">
+                <div id="locationStatus" class="inline-flex items-center px-4 py-2 rounded-full text-white font-medium status-in-factory">
+                    <i data-feather="map-pin" class="w-4 h-4 mr-2"></i>
+                    อยู่ในโรงงาน
                 </div>
-              </div>
+            </div>
+
 
               <!-- Check-in/out Buttons -->
               <div class="space-y-4">
@@ -145,20 +145,18 @@
             </div>
           </div>
 
-          <!-- Location & Onsite Form -->
-          <div class="bg-white rounded-2xl card-shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลสถานที่</h3>
-
-            <!-- GPS Status -->
-            <div class="mb-6">
+            <!-- GPS Status แบบใหม่ -->
+            <div class="bg-white rounded-2xl card-shadow p-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลสถานที่</h3>
+            <div class="mb-6" id="gpsCard">
               <div class="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200">
                 <div class="flex items-center">
-                  <i data-feather="navigation" class="w-5 h-5 text-green-600 mr-3"></i>
-                  <span class="text-green-800 font-medium">GPS เชื่อมต่อแล้ว</span>
+                  <i id="gpsIcon" data-feather="navigation" class="w-5 h-5 text-green-600 mr-3"></i>
+                  <span id="gpsMessage" class="text-green-800 font-medium">GPS เชื่อมต่อแล้ว</span>
                 </div>
-                <span class="text-green-600 text-sm">ในรัศมี 50 ม.</span>
+                <span id="gpsDistance" class="text-green-600 text-sm">--</span>
               </div>
-            </div>
+              </div>
 
             <!-- Onsite Form -->
             <div id="onsiteForm" class="hidden">
@@ -205,10 +203,10 @@
                 </tr>
               </thead>
               <tbody id="todayRecords">
-</tbody>
+              </tbody>
 
-                  </td>
-                </tr>
+              </td>
+              </tr>
               </tbody>
             </table>
           </div>
@@ -378,13 +376,172 @@
   </div>
 
   <script>
+    // โรงงาน
+      const factoryLat = 13.6239;   // latitude โรงงาน 
+      const factoryLng = 101.0255;  // longitude โรงงาน
+      const radiusMeters = 500;     // tolerance เช่น 500m
+      let lastPosition = null;
+
+
+      //  ฟังก์ชันช่วยคำนวณระยะทาง
+      function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+      // เริ่มติดตามตำแหน่ง
+function startWatchingPosition() {
+    if (!navigator.geolocation) {
+        alert("เบราว์เซอร์ไม่รองรับ GPS");
+        return;
+    }
+
+    navigator.geolocation.watchPosition(
+        (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+            const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
+            const inFactory = distance <= radiusMeters;
+
+            console.log("Lat:", lat, "Lng:", lng, "Distance:", distance, "Accuracy:", accuracy, "inFactory:", inFactory);
+        },
+        (error) => {
+            console.error("GPS Error:", error.code, error.message);
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+    );
+}
+
+
+// เรียกใช้
+document.addEventListener("DOMContentLoaded", () => {
+    feather.replace();
+    startWatchingPosition();
+});
+
+function updateGPSStatus(lat, lng, accuracy) {
+    const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
+    const inFactory = distance <= radiusMeters;
+
+    const gpsMessage = document.getElementById('gpsMessage');
+    const gpsDistance = document.getElementById('gpsDistance');
+    const gpsIcon = document.getElementById('gpsIcon');
+    const gpsCard = document.getElementById('gpsCard');
+
+    if (!gpsMessage || !gpsDistance || !gpsIcon || !gpsCard) return;
+
+    if (inFactory) {
+        gpsMessage.textContent = "GPS เชื่อมต่อแล้ว";
+        gpsDistance.textContent = `ในรัศมี ${distance.toFixed(1)} ม.`;
+
+        gpsCard.className = "mb-6"; // reset container
+        gpsCard.firstElementChild.className = "flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200";
+
+        gpsIcon.className = "w-5 h-5 text-green-600 mr-3";
+        gpsMessage.className = "text-green-800 font-medium";
+        gpsDistance.className = "text-green-600 text-sm";
+    } else {
+        gpsMessage.textContent = "❌ อยู่นอกโรงงาน";
+        gpsDistance.textContent = `นอกรัศมี ${distance.toFixed(1)} ม.`;
+
+        gpsCard.className = "mb-6";
+        gpsCard.firstElementChild.className = "flex items-center justify-between p-4 bg-red-50 rounded-xl border border-red-200";
+
+        gpsIcon.className = "w-5 h-5 text-red-600 mr-3";
+        gpsMessage.className = "text-red-800 font-medium";
+        gpsDistance.className = "text-red-600 text-sm";
+    }
+
+    lastPosition = { latitude: lat, longitude: lng };
+    if (feather) feather.replace();
+}
+
+
+
+  // เรียกดู GPS ทันที
+function initGPS() {
+    if (!navigator.geolocation) {
+        alert("เบราว์เซอร์ไม่รองรับ GPS");
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const accuracy = pos.coords.accuracy;
+
+            updateGPSStatus(lat, lng, accuracy);
+        },
+        (err) => {
+            console.error("GPS Error:", err);
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+    );
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    feather.replace();
+    initGPS();
+});
+
+// หยุดติดตามตำแหน่ง
+function stopWatchingPosition() {
+    if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+    }
+}
+
+    function checkGPSLocationAndUpdateStatus(callback) {
+    if (typeof callback !== "function") {
+        console.error("callback ไม่ใช่ function!");
+        return; // ❌ หยุดทำงาน ถ้า callback ไม่ถูกส่ง
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
+            const inFactory = distance <= radiusMeters;
+
+            console.log("distance:", distance, "inFactory:", inFactory);
+            updateLocationStatus(inFactory);
+
+            callback(inFactory, lat, lng, distance); // ✅ ส่ง callback
+        },
+        (err) => {
+            console.error("GPS Error:", err);
+            callback(false, 0, 0, 0);
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+    );
+}
+
+    function updateLocationStatus(inFactory) {
+    const statusElement = document.getElementById('locationStatus');
+
+    if (!statusElement) return; // ป้องกัน error
+
+    if (inFactory) {
+        statusElement.className = 'inline-flex items-center px-4 py-2 rounded-full text-white font-medium status-in-factory';
+        statusElement.innerHTML = `<i data-feather="map-pin" class="w-4 h-4 mr-2"></i>อยู่ในโรงงาน`;
+    } else {
+        statusElement.className = 'inline-flex items-center px-4 py-2 rounded-full text-white font-medium status-onsite';
+        statusElement.innerHTML = `<i data-feather="map-pin" class="w-4 h-4 mr-2"></i>อยู่นอกโรงงาน`;
+    }
+
+    feather.replace();
+}
+
     // Initialize Feather Icons
         feather.replace();
-
-        // Global State
-        let currentUser = null;
-        let isCheckedIn = false;
-        let isOnsite = true;
 
         // Initialize App
         function initApp() {
@@ -393,7 +550,9 @@
             
             // Simulate GPS check
             setTimeout(() => {
-                checkGPSLocation();
+            checkGPSLocationAndUpdateStatus((inFactory, lat, lng, distance) => {
+                console.log("GPS Status → inFactory:", inFactory, "lat:", lat, "lng:", lng, "distance:", distance);
+            });
             }, 2000);
         }
         document.addEventListener('DOMContentLoaded', initApp);
@@ -416,45 +575,32 @@
         
         // Login Function
         function login(event) {
-        event.preventDefault();
+    event.preventDefault();
+    const employeeId = document.getElementById('employeeId').value;
+    const password = document.getElementById('password').value;
 
-        const employeeId = document.getElementById('employeeId').value;
-        const password = document.getElementById('password').value;
+    google.script.run.withSuccessHandler((response) => {
+        if (response.success) {
+            currentUser = response;
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('currentUser').innerText = `พนักงาน: ${response.username}`;
+            showNotification("เข้าสู่ระบบสำเร็จ!");
+        } else {
+            document.getElementById('error').innerText = 'รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง';
+        }
+    }).checkLogin(employeeId, password);
+}
 
-        google.script.run.withSuccessHandler(function(response) {
-            console.log('Response:', response); // debug ดูค่า
 
-            if (response && response.success) {
-                // เก็บ user ไว้ใน state
-                currentUser = response; 
-                // ตัวอย่าง response: { success: true, employeeId: "Aum", role: "staff" }
+    function logout() {
+    currentUser = null;
+    document.getElementById('mainApp').classList.add('hidden');
+    document.getElementById('loginPage').classList.remove('hidden');
+    document.getElementById('currentUser').innerText = '';
+}
 
-                // ซ่อนหน้า login
-                document.getElementById('loginPage').classList.add('hidden');
 
-                // แสดง main app
-                const mainApp = document.getElementById('mainApp');
-                mainApp.classList.remove('hidden');
-
-                document.getElementById('currentUser').innerText = `พนักงาน: ${currentUser.employeeId}`;
-
-                document.getElementById('usernav').classList.remove('hidden')
-
-                showNotification(`เข้าสู่ระบบสำเร็จ!`);
-            } else {
-                const errorDiv = document.getElementById('error');
-                if (errorDiv) errorDiv.innerText = 'รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง';
-            }
-        }).checkLogin(employeeId, password);
-    }
-
-      // ฟังก์ชัน Logout
-      function logout() {
-          currentUser = null;
-          document.getElementById('loginPage').classList.remove('hidden');
-          document.getElementById('mainApp').classList.add('hidden');
-          showNotification("ออกจากระบบแล้ว");
-      }
 
     // Tab Navigation
     function showTab(tabName) {
@@ -477,35 +623,7 @@
     activeTab.classList.add('bg-blue-600', 'text-white');
     activeTab.classList.remove('text-gray-600', 'hover:bg-gray-50');
 }
-        // Check GPS Location
-        function checkGPSLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        // Simulate factory location check (in real app, calculate distance)
-                        const inFactory = Math.random() > 0.3; // 70% chance in factory
-                        updateLocationStatus(inFactory);
-                    },
-                    (error) => {
-                        console.log('GPS Error:', error);
-                        updateLocationStatus(false);
-                    }
-                );
-            }
-        }
 
-        // Update Location Status
-        function updateLocationStatus(inFactory) {
-            const statusElement = document.getElementById('locationStatus');
-            if (inFactory) {
-                statusElement.className = 'inline-flex items-center px-4 py-2 rounded-full text-white font-medium status-in-factory';
-                statusElement.innerHTML = '<i data-feather="map-pin" class="w-4 h-4 mr-2"></i>อยู่ในโรงงาน';
-            } else {
-                statusElement.className = 'inline-flex items-center px-4 py-2 rounded-full text-white font-medium status-onsite';
-                statusElement.innerHTML = '<i data-feather="map-pin" class="w-4 h-4 mr-2"></i>อยู่นอกโรงงาน';
-            }
-            feather.replace();
-        }
         // Toggle Onsite Form
         function toggleOnsite() {
             const form = document.getElementById('onsiteForm');
@@ -525,94 +643,77 @@
             feather.replace();
         }
         // Check In
-        function checkIn() {
-      if (!currentUser) {
-        showNotification("กรุณาเข้าสู่ระบบก่อนเช็คอิน");
-        return;
-    }
+        // ฟังก์ชันเช็คอิน
+
+function checkIn() {
+    const { latitude, longitude } = lastPosition || { latitude: factoryLat, longitude: factoryLng };
 
     const now = new Date();
-    const timeString = now.toLocaleTimeString('th-TH');
+    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คอิน', 'โรงงาน', 'ปกติ');
 
-    isCheckedIn = true;
-    document.getElementById('checkinBtn').disabled = true;
-    document.getElementById('checkinBtn').classList.add('opacity-50');
-    document.getElementById('checkoutBtn').disabled = false;
-    document.getElementById('checkoutBtn').classList.remove('opacity-50');
+    google.script.run.withSuccessHandler(() => showNotification('เช็คอินสำเร็จ!'))
+        .recordCheckIn(
+            currentUser.employeeId,
+            'โรงงาน',
+            'เช็คอิน',
+            'ปกติ',
+            latitude,
+            longitude,
+            true
+        );
+}
+// ฟังก์ชันเช็คเอาท์
+function checkOut() {
+    const { latitude, longitude } = lastPosition || { latitude: factoryLat, longitude: factoryLng };
 
-    // เพิ่ม record ในตาราง UI
-    addTodayRecord(timeString, 'เช็คอิน', isOnsite ? 'Onsite' : 'โรงงาน', 'ปกติ');
+    const now = new Date();
+    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', 'โรงงาน', 'ปกติ');
 
-    // ส่งข้อมูลไปบันทึกใน Google Sheets
-    google.script.run.withSuccessHandler(() => {
-        showNotification('เช็คอินสำเร็จ!');
-    }).recordCheckIn(
-        currentUser.employeeId,
-        timeString,
-        isOnsite ? 'Onsite' : 'โรงงาน',
-        'เช็คอิน',    // action
-        'ปกติ'       // status
-      );
-  }
-
-        // Check Out
-        function checkOut() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('th-TH');
-            
-            isCheckedIn = false;
-            document.getElementById('checkinBtn').disabled = false;
-            document.getElementById('checkinBtn').classList.remove('opacity-50');
-            document.getElementById('checkoutBtn').disabled = true;
-            document.getElementById('checkoutBtn').classList.add('opacity-50');
-            
-            // Add record to today's table
-            addTodayRecord(timeString, 'เช็คเอาท์', isOnsite ? 'Onsite' : 'โรงงาน', 'ปกติ');
-            
-            google.script.run.withSuccessHandler(() => {
-              showNotification('เช็คเอาท์สำเร็จ!');
-          }).recordCheckIn(
-              currentUser.employeeId,
-              timeString,
-              isOnsite ? 'Onsite' : 'โรงงาน',
-              'เช็คเอาท์',  // action
-              'ปกติ'        // status
-          );
-        }
-
-        // Add Today Record
-        function addTodayRecord(time, type, location, status) {
-        const tbody = document.getElementById('todayRecords');
-
-        // ลบ template ว่างถ้ามี
-        if (tbody.children.length === 1 && tbody.children[0].querySelector('td').textContent.trim() === '') {
-            tbody.innerHTML = '';
-        }
-
-        const row = document.createElement('tr');
-        row.className = 'border-b border-gray-100';
-
-        const typeClass = type === 'เช็คอิน' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-
-        row.innerHTML = `
-            <td class="py-3 px-4 text-gray-900">${time}</td>
-            <td class="py-3 px-4">
-                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${typeClass}">
-                    ${type}
-                </span>
-            </td>
-            <td class="py-3 px-4 text-gray-600">${location}</td>
-            <td class="py-3 px-4">
-                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    ${status}
-                </span>
-            </td>
-        `;
-
-        // แทรกบนสุดของตาราง
-        tbody.prepend(row);
+    google.script.run.withSuccessHandler(() => showNotification('เช็คเอาท์สำเร็จ!'))
+        .recordCheckOut(
+            currentUser.employeeId,
+            'โรงงาน',
+            'เช็คเอาท์',
+            'ปกติ',
+            latitude,
+            longitude,
+            true
+        );
 }
 
+// เริ่มติดตาม GPS เมื่อโหลดหน้า
+document.addEventListener("DOMContentLoaded", () => {
+    feather.replace();
+    startWatchingPosition();
+});
+        // Add Today Record
+        function addTodayRecord(time, type, location, status) {
+    const tbody = document.getElementById('todayRecords');
+
+    if (tbody.children.length === 1 && tbody.children[0].querySelector('td').textContent.trim() === '') {
+        tbody.innerHTML = '';
+    }
+
+    const row = document.createElement('tr');
+    row.className = 'border-b border-gray-100';
+    const typeClass = type === 'เช็คอิน' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+
+    row.innerHTML = `
+        <td class="py-3 px-4 text-gray-900">${time}</td>
+        <td class="py-3 px-4">
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${typeClass}">
+                ${type}
+            </span>
+        </td>
+        <td class="py-3 px-4 text-gray-600">${location}</td>
+        <td class="py-3 px-4">
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                ${status}
+            </span>
+        </td>
+    `;
+    tbody.prepend(row);
+}
         // Save Draft Report
         function saveDraft() {
             showNotification('บันทึกแบบร่างสำเร็จ!');
