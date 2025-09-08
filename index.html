@@ -380,8 +380,9 @@
       const factoryLat = 13.6239;   // latitude โรงงาน 
       const factoryLng = 101.0255;  // longitude โรงงาน
       const radiusMeters = 500;     // tolerance เช่น 500m
-      let lastPosition = null;
 
+      let lastPositions = [];
+      let lastPosition = null;
 
       //  ฟังก์ชันช่วยคำนวณระยะทาง
       function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
@@ -394,74 +395,123 @@
 }
 
       // เริ่มติดตามตำแหน่ง
+      // อัปเดตสถานะ GPS
+// ฟังก์ชันเฉลี่ยพิกัด
+function smoothPosition(lat, lng, accuracy) {
+    if (accuracy > 300) return null; // ถ้า GPS ไม่แม่นมาก ข้าม
+
+    lastPositions.push({ lat, lng });
+    if (lastPositions.length > 5) lastPositions.shift(); // เก็บ 5 ค่าสุดท้าย
+
+    const avgLat = lastPositions.reduce((sum, p) => sum + p.lat, 0) / lastPositions.length;
+    const avgLng = lastPositions.reduce((sum, p) => sum + p.lng, 0) / lastPositions.length;
+
+    // ตรวจสอบว่ากระโดดเกิน 100 ม. จากตำแหน่งก่อนหน้าไหม
+    if (lastPosition) {
+        const jump = getDistanceFromLatLonInMeters(avgLat, avgLng, lastPosition.lat, lastPosition.lng);
+        if (jump > 100) return null; // ถ้ากระโดดมากเกินไป ให้ข้าม
+    }
+
+    return { lat: avgLat, lng: avgLng };
+}
+
+// อัปเดตกล่อง GPS
+function updateGPSStatus(lat, lng, accuracy) {
+    const smoothed = smoothPosition(lat, lng, accuracy);
+    if (!smoothed) return;
+
+    const distance = getDistanceFromLatLonInMeters(smoothed.lat, smoothed.lng, factoryLat, factoryLng);
+    const inFactory = distance <= radiusMeters;
+
+    const gpsMessage = document.getElementById("gpsMessage");
+    const gpsDistance = document.getElementById("gpsDistance");
+    const gpsIcon = document.getElementById("gpsIcon");
+    const gpsCard = document.getElementById("gpsCard");
+
+    if (!gpsMessage || !gpsDistance || !gpsIcon || !gpsCard) return;
+
+    let bgColor, borderColor, iconColor, textColor, distanceTextColor, messageText, distanceText;
+
+    if (inFactory) {
+        messageText = "GPS เชื่อมต่อแล้ว";
+        distanceText = `ในรัศมี ${distance.toFixed(1)} ม.`;
+        bgColor = "bg-green-50";
+        borderColor = "border-green-200";
+        iconColor = "#16a34a"; // ใช้ hex ตรง ๆ
+        textColor = "text-green-800";
+        distanceTextColor = "text-green-600";
+    } else {
+        messageText = "อยู่นอกโรงงาน";
+        distanceText = `นอกรัศมี ${distance.toFixed(1)} ม.`;
+        bgColor = "bg-red-50";
+        borderColor = "border-red-200";
+        iconColor = "#dc2626"; // สีแดง hex
+        textColor = "text-red-800";
+        distanceTextColor = "text-red-600";
+    }
+
+    gpsMessage.textContent = messageText;
+    gpsDistance.textContent = distanceText;
+
+    // ปรับ Card
+    gpsCard.firstElementChild.className = `flex items-center justify-between p-4 rounded-xl border ${bgColor} ${borderColor}`;
+
+    // ปรับข้อความ
+    gpsMessage.className = `font-medium ${textColor}`;
+    gpsDistance.className = `text-sm ${distanceTextColor}`;
+
+    // เปลี่ยนสี SVG ไอคอนตรง ๆ
+    gpsIcon.style.stroke = iconColor;
+
+    lastPosition = { lat: smoothed.lat, lng: smoothed.lng };
+}
+
+// ส่วน error เมื่อดึง GPS ไม่ได้
+function handleGPSError() {
+    const gpsMessage = document.getElementById("gpsMessage");
+    const gpsDistance = document.getElementById("gpsDistance");
+    const gpsIcon = document.getElementById("gpsIcon");
+    const gpsCard = document.getElementById("gpsCard");
+
+    if (!gpsMessage || !gpsDistance || !gpsIcon || !gpsCard) return;
+
+    gpsMessage.textContent = "ไม่สามารถดึงตำแหน่งได้";
+    gpsDistance.textContent = "--";
+
+    const cardDiv = gpsCard.firstElementChild;
+    cardDiv.className = "flex items-center justify-between p-4 rounded-xl border bg-yellow-50 border-yellow-200";
+    gpsIcon.className = "w-5 h-5 text-yellow-600 mr-3";
+    gpsMessage.className = "font-medium text-yellow-800";
+    gpsDistance.className = "text-sm text-yellow-600";
+
+    if (feather) feather.replace();
+}
+
+
+// เริ่มจับ GPS
 function startWatchingPosition() {
     if (!navigator.geolocation) {
         alert("เบราว์เซอร์ไม่รองรับ GPS");
         return;
     }
 
-    navigator.geolocation.watchPosition(
+        navigator.geolocation.watchPosition(
         (position) => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            const accuracy = position.coords.accuracy;
-            const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
-            const inFactory = distance <= radiusMeters;
-
-            console.log("Lat:", lat, "Lng:", lng, "Distance:", distance, "Accuracy:", accuracy, "inFactory:", inFactory);
+            updateGPSStatus(position.coords.latitude, position.coords.longitude, position.coords.accuracy);
         },
         (error) => {
             console.error("GPS Error:", error.code, error.message);
+            handleGPSError();
         },
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
     );
 }
 
-
-// เรียกใช้
+// โหลดหน้าเสร็จเริ่ม GPS
 document.addEventListener("DOMContentLoaded", () => {
     feather.replace();
     startWatchingPosition();
 });
-
-function updateGPSStatus(lat, lng, accuracy) {
-    const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
-    const inFactory = distance <= radiusMeters;
-
-    const gpsMessage = document.getElementById('gpsMessage');
-    const gpsDistance = document.getElementById('gpsDistance');
-    const gpsIcon = document.getElementById('gpsIcon');
-    const gpsCard = document.getElementById('gpsCard');
-
-    if (!gpsMessage || !gpsDistance || !gpsIcon || !gpsCard) return;
-
-    if (inFactory) {
-        gpsMessage.textContent = "GPS เชื่อมต่อแล้ว";
-        gpsDistance.textContent = `ในรัศมี ${distance.toFixed(1)} ม.`;
-
-        gpsCard.className = "mb-6"; // reset container
-        gpsCard.firstElementChild.className = "flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200";
-
-        gpsIcon.className = "w-5 h-5 text-green-600 mr-3";
-        gpsMessage.className = "text-green-800 font-medium";
-        gpsDistance.className = "text-green-600 text-sm";
-    } else {
-        gpsMessage.textContent = "❌ อยู่นอกโรงงาน";
-        gpsDistance.textContent = `นอกรัศมี ${distance.toFixed(1)} ม.`;
-
-        gpsCard.className = "mb-6";
-        gpsCard.firstElementChild.className = "flex items-center justify-between p-4 bg-red-50 rounded-xl border border-red-200";
-
-        gpsIcon.className = "w-5 h-5 text-red-600 mr-3";
-        gpsMessage.className = "text-red-800 font-medium";
-        gpsDistance.className = "text-red-600 text-sm";
-    }
-
-    lastPosition = { latitude: lat, longitude: lng };
-    if (feather) feather.replace();
-}
-
-
 
   // เรียกดู GPS ทันที
 function initGPS() {
