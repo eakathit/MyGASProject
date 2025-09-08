@@ -39,9 +39,6 @@ function recordCheckIn(employeeId, location, action, status, lat, lng, isOnsite)
         location,
         action,
         status,
-        lat || 0,
-        lng || 0,
-        isOnsite
     ]);
     return true;
 }

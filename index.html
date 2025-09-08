@@ -384,7 +384,7 @@
       let lastPositions = [];
       let lastPosition = null;
 
-      //  ฟังก์ชันช่วยคำนวณระยะทาง
+      // ฟังก์ชันช่วยคำนวณระยะทาง
       function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
     const R = 6371000;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -452,18 +452,13 @@ function updateGPSStatus(lat, lng, accuracy) {
 
     gpsMessage.textContent = messageText;
     gpsDistance.textContent = distanceText;
-
-    // ปรับ Card
     gpsCard.firstElementChild.className = `flex items-center justify-between p-4 rounded-xl border ${bgColor} ${borderColor}`;
-
-    // ปรับข้อความ
     gpsMessage.className = `font-medium ${textColor}`;
     gpsDistance.className = `text-sm ${distanceTextColor}`;
-
-    // เปลี่ยนสี SVG ไอคอนตรง ๆ
     gpsIcon.style.stroke = iconColor;
 
     lastPosition = { lat: smoothed.lat, lng: smoothed.lng };
+    updateLocationStatus(inFactory);
 }
 
 // ส่วน error เมื่อดึง GPS ไม่ได้
@@ -564,7 +559,7 @@ function stopWatchingPosition() {
             console.log("distance:", distance, "inFactory:", inFactory);
             updateLocationStatus(inFactory);
 
-            callback(inFactory, lat, lng, distance); // ✅ ส่ง callback
+            callback(inFactory, lat, lng, distance); // ส่ง callback
         },
         (err) => {
             console.error("GPS Error:", err);
@@ -575,19 +570,18 @@ function stopWatchingPosition() {
 }
 
     function updateLocationStatus(inFactory) {
-    const statusElement = document.getElementById('locationStatus');
+  const statusElement = document.getElementById('locationStatus');
+  if (!statusElement) return;
 
-    if (!statusElement) return; // ป้องกัน error
+  if (inFactory) {
+    statusElement.className = 'inline-flex items-center px-4 py-2 rounded-full text-white font-medium status-in-factory';
+    statusElement.innerHTML = '<i data-feather="map-pin" class="w-4 h-4 mr-2"></i>อยู่ในโรงงาน';
+  } else {
+    statusElement.className = 'inline-flex items-center px-4 py-2 rounded-full text-white font-medium status-onsite';
+    statusElement.innerHTML = '<i data-feather="map-pin" class="w-4 h-4 mr-2"></i>อยู่นอกโรงงาน';
+  }
 
-    if (inFactory) {
-        statusElement.className = 'inline-flex items-center px-4 py-2 rounded-full text-white font-medium status-in-factory';
-        statusElement.innerHTML = `<i data-feather="map-pin" class="w-4 h-4 mr-2"></i>อยู่ในโรงงาน`;
-    } else {
-        statusElement.className = 'inline-flex items-center px-4 py-2 rounded-full text-white font-medium status-onsite';
-        statusElement.innerHTML = `<i data-feather="map-pin" class="w-4 h-4 mr-2"></i>อยู่นอกโรงงาน`;
-    }
-
-    feather.replace();
+  feather.replace();
 }
 
     // Initialize Feather Icons
@@ -650,8 +644,6 @@ function stopWatchingPosition() {
     document.getElementById('currentUser').innerText = '';
 }
 
-
-
     // Tab Navigation
     function showTab(tabName) {
     // ซ่อนทุก tab content
@@ -692,9 +684,8 @@ function stopWatchingPosition() {
             }
             feather.replace();
         }
-        // Check In
-        // ฟังก์ชันเช็คอิน
 
+// Check In
 function checkIn() {
     const { latitude, longitude } = lastPosition || { latitude: factoryLat, longitude: factoryLng };
 
@@ -707,15 +698,12 @@ function checkIn() {
             'โรงงาน',
             'เช็คอิน',
             'ปกติ',
-            latitude,
-            longitude,
-            true
         );
 }
+
 // ฟังก์ชันเช็คเอาท์
 function checkOut() {
     const { latitude, longitude } = lastPosition || { latitude: factoryLat, longitude: factoryLng };
-
     const now = new Date();
     addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', 'โรงงาน', 'ปกติ');
 
@@ -725,19 +713,18 @@ function checkOut() {
             'โรงงาน',
             'เช็คเอาท์',
             'ปกติ',
-            latitude,
-            longitude,
-            true
         );
 }
 
-// เริ่มติดตาม GPS เมื่อโหลดหน้า
-document.addEventListener("DOMContentLoaded", () => {
-    feather.replace();
-    startWatchingPosition();
-});
+      document.addEventListener("DOMContentLoaded", () => {
+          feather.replace();
+          startWatchingPosition(); // เริ่มติดตาม GPS เมื่อโหลดหน้า
+      });
+
+
+
         // Add Today Record
-        function addTodayRecord(time, type, location, status) {
+    function addTodayRecord(time, type, location, status) {
     const tbody = document.getElementById('todayRecords');
 
     if (tbody.children.length === 1 && tbody.children[0].querySelector('td').textContent.trim() === '') {
