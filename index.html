@@ -42,21 +42,21 @@
 
 <body class="bg-gray-50 min-h-screen">
   <!-- Navigation -->
-  <nav id="usernav" class="hidden bg-white shadow-sm border-b border-gray-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center h-16">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <h1 class="text-xl font-bold text-gray-900">ระบบบันทึกเวลา</h1>
-          </div>
+  <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-xl font-bold text-gray-900">ระบบลงเวลาเข้า-ออก</h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600" id="currentUser">พนักงาน: สมชาย ใจดี</span>
+                    <button onclick="logout()" class="text-sm text-blue-600 hover:text-blue-800">ออกจากระบบ</button>
+                </div>
+            </div>
         </div>
-        <div class="flex items-center space-x-4">
-          <span class="text-sm text-gray-600" id="currentUser"></span>
-          <button onclick="logout()" class="text-sm text-blue-600 hover:text-blue-800">ออกจากระบบ</button>
-        </div>
-      </div>
-    </div>
-  </nav>
+    </nav>
 
   <!-- Main Container -->
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -123,12 +123,13 @@
               <div class="text-lg text-gray-600 mb-6" id="currentDate"></div>
 
               <!-- Location Status -->
-            <div class="mb-6">
-                <div id="locationStatus" class="inline-flex items-center px-4 py-2 rounded-full text-white font-medium status-in-factory">
-                    <i data-feather="map-pin" class="w-4 h-4 mr-2"></i>
-                    อยู่ในโรงงาน
+              <div class="mb-6">
+                <div id="locationStatus"
+                  class="inline-flex items-center px-4 py-2 rounded-full text-white font-medium status-in-factory">
+                  <i data-feather="map-pin" class="w-4 h-4 mr-2"></i>
+                  อยู่ในโรงงาน
                 </div>
-            </div>
+              </div>
 
 
               <!-- Check-in/out Buttons -->
@@ -145,9 +146,9 @@
             </div>
           </div>
 
-            <!-- GPS Status แบบใหม่ -->
-            <div class="bg-white rounded-2xl card-shadow p-6">
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลสถานที่</h3>
+          <!-- GPS Status แบบใหม่ -->
+          <div class="bg-white rounded-2xl card-shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลสถานที่</h3>
             <div class="mb-6" id="gpsCard">
               <div class="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200">
                 <div class="flex items-center">
@@ -156,7 +157,7 @@
                 </div>
                 <span id="gpsDistance" class="text-green-600 text-sm">--</span>
               </div>
-              </div>
+            </div>
 
             <!-- Onsite Form -->
             <div id="onsiteForm" class="hidden">
@@ -394,8 +395,6 @@
     return R * c;
 }
 
-      // เริ่มติดตามตำแหน่ง
-      // อัปเดตสถานะ GPS
 // ฟังก์ชันเฉลี่ยพิกัด
 function smoothPosition(lat, lng, accuracy) {
     if (accuracy > 300) return null; // ถ้า GPS ไม่แม่นมาก ข้าม
@@ -472,6 +471,11 @@ function handleGPSError() {
 
     gpsMessage.textContent = "ไม่สามารถดึงตำแหน่งได้";
     gpsDistance.textContent = "--";
+
+    gpsCard.firstElementChild.className = "flex items-center justify-between p-4 rounded-xl border bg-yellow-50 border-yellow-200";
+    gpsMessage.className = "font-medium text-yellow-800";
+    gpsDistance.className = "text-sm text-yellow-600";
+    gpsIcon.style.stroke = "#ca8a04"; // เหลืองเข้ม (Tailwind yellow-600)
 
     const cardDiv = gpsCard.firstElementChild;
     cardDiv.className = "flex items-center justify-between p-4 rounded-xl border bg-yellow-50 border-yellow-200";
@@ -569,7 +573,7 @@ function stopWatchingPosition() {
     );
 }
 
-    function updateLocationStatus(inFactory) {
+  function updateLocationStatus(inFactory) {
   const statusElement = document.getElementById('locationStatus');
   if (!statusElement) return;
 
@@ -616,7 +620,7 @@ function stopWatchingPosition() {
             document.getElementById('currentTime').textContent = timeString;
             document.getElementById('currentDate').textContent = dateString;
         }
-        
+
         // Login Function
         function login(event) {
     event.preventDefault();
@@ -635,7 +639,6 @@ function stopWatchingPosition() {
         }
     }).checkLogin(employeeId, password);
 }
-
 
     function logout() {
     currentUser = null;
@@ -685,12 +688,39 @@ function stopWatchingPosition() {
             feather.replace();
         }
 
+// function เช็คสถานะเข้างาน
+function getCheckInStatus(now) {
+  const workStart = { hour: 8, minute: 30 };
+  
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+
+  if (hour < workStart.hour || (hour === workStart.hour && minute <= workStart.minute)) {
+    return "ปกติ";
+  }
+  return "สาย";
+}
+
+function getCheckOutStatus(now) {
+    const workEnd = { hour: 17, minute: 30 };
+
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+
+    // ปกติ = ออกหลังหรือเท่ากับเวลาเลิกงาน
+    if (hour > workEnd.hour || (hour === workEnd.hour && minute >= workEnd.minute)) {
+        return "ปกติ";
+    }
+    return "ออกก่อนเวลา";
+}
+
 // Check In
 function checkIn() {
     const { lat, lng } = lastPosition || { lat: factoryLat, lng: factoryLng };
-
     const now = new Date();
-    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คอิน', 'โรงงาน', 'ปกติ');
+
+    const status = getCheckInStatus(now); // 🔹 status จริง
+    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คอิน', 'โรงงาน', status);
 
     // ปิดปุ่มเช็คอิน
     const checkinBtn = document.getElementById('checkinBtn');
@@ -711,15 +741,16 @@ function checkIn() {
             currentUser.employeeId,
             'โรงงาน',
             'เช็คอิน',
-            'ปกติ',
+            status, // 🔹 ส่ง status จริงลง Sheet
         );
 }
 
 function checkOut() {
     const { lat, lng } = lastPosition || { lat: factoryLat, longitude: factoryLng };
-
     const now = new Date();
-    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', 'โรงงาน', 'ปกติ');
+
+    const status = getCheckOutStatus(now);
+    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', 'โรงงาน', status);
 
     // ปิดปุ่มเช็คเอาท์
     const checkoutBtn = document.getElementById('checkoutBtn');
@@ -733,7 +764,7 @@ function checkOut() {
             currentUser.employeeId,
             'โรงงาน',
             'เช็คเอาท์',
-            'ปกติ',
+            status,
         );
 }
 
@@ -741,7 +772,6 @@ function checkOut() {
           feather.replace();
           startWatchingPosition(); // เริ่มติดตาม GPS เมื่อโหลดหน้า
       });
-
 
         // Add Today Record
     function addTodayRecord(time, type, location, status) {
@@ -753,7 +783,23 @@ function checkOut() {
 
     const row = document.createElement('tr');
     row.className = 'border-b border-gray-100';
-    const typeClass = type === 'เช็คอิน' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+
+    // สีตามประเภท เช็คอิน = เขียว, เช็คเอาท์ = แดง
+    const typeClass = type === 'เช็คอิน'
+        ? 'bg-green-100 text-green-800'
+        : 'bg-red-100 text-red-800';
+
+    // สีตาม status (ปรับ "ปกติ" เป็นสีฟ้า)
+    let statusClass = 'bg-gray-100 text-gray-800'; // default
+    if (status === 'ปกติ') {
+        statusClass = 'bg-blue-100 text-blue-800'; // 🔹 ปกติเป็นฟ้า
+    } else if (status === 'สาย') {
+        statusClass = 'bg-yellow-100 text-yellow-800';
+    } else if (status === 'ออกก่อนเวลา') {
+        statusClass = 'bg-red-100 text-red-800';
+    } else if (status === 'ขาด') {
+        statusClass = 'bg-gray-200 text-gray-600';
+    }
 
     row.innerHTML = `
         <td class="py-3 px-4 text-gray-900">${time}</td>
@@ -764,13 +810,14 @@ function checkOut() {
         </td>
         <td class="py-3 px-4 text-gray-600">${location}</td>
         <td class="py-3 px-4">
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusClass}">
                 ${status}
             </span>
         </td>
     `;
     tbody.prepend(row);
 }
+
         // Save Draft Report
         function saveDraft() {
             showNotification('บันทึกแบบร่างสำเร็จ!');
