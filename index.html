@@ -380,7 +380,7 @@
     // โรงงาน
       const factoryLat = 13.6239;   // latitude โรงงาน 
       const factoryLng = 101.0255;  // longitude โรงงาน
-      const radiusMeters = 500;     // tolerance เช่น 500m
+      const radiusMeters = 300;     // tolerance เช่น 500m
 
       let lastPositions = [];
       let lastPosition = null;
@@ -731,9 +731,17 @@ function checkIn() {
     const { lat, lng } = lastPosition || { lat: factoryLat, lng: factoryLng };
     const now = new Date();
 
+    const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
+    const inFactory = distance <= radiusMeters;
+
+    if (!inFactory) {
+        showNotification("คุณอยู่นอกโรงงาน ไม่สามารถเช็คอินได้");
+        return; // ❌ ยกเลิกการเช็คอิน
+    }
+
     const status = getCheckInStatus(now); // 🔹 status จริง
     addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คอิน', 'โรงงาน', status);
-
+    
     // ปิดปุ่มเช็คอิน
     const checkinBtn = document.getElementById('checkinBtn');
     if (checkinBtn) {
@@ -760,6 +768,14 @@ function checkIn() {
 function checkOut() {
     const { lat, lng } = lastPosition || { lat: factoryLat, longitude: factoryLng };
     const now = new Date();
+
+    const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
+    const inFactory = distance <= radiusMeters;
+
+    if (!inFactory) {
+        showNotification("คุณอยู่นอกโรงงาน ไม่สามารถเช็คเอาท์ได้");
+        return;
+    }
 
     const status = getCheckOutStatus(now);
     addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', 'โรงงาน', status);
