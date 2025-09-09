@@ -163,21 +163,12 @@
             <div id="onsiteForm" class="hidden">
               <div class="space-y-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">ประเภทงาน</label>
-                  <select class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500">
-                                        <option>งานติดตั้งที่ลูกค้า</option>
-                                        <option>งานซ่อมบำรุง</option>
-                                        <option>งานประชุมนอกสถานที่</option>
-                                        <option>อื่นๆ</option>
-                                    </select>
-                </div>
-                <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">สถานที่</label>
                   <input type="text" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500" placeholder="ระบุสถานที่ทำงาน">
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">หมายเหตุ</label>
-                  <textarea class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 h-24" placeholder="รายละเอียดเพิ่มเติม"></textarea>
+                  <textarea class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 h-24" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></textarea>
                 </div>
               </div>
             </div>
@@ -384,6 +375,7 @@
 
       let lastPositions = [];
       let lastPosition = null;
+      let isOnsite = false;
 
       // ฟังก์ชันช่วยคำนวณระยะทาง
       function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
@@ -728,28 +720,38 @@ function getCheckOutStatus(now) {
 
 // Check In
 function checkIn() {
-    const { lat, lng } = lastPosition || { lat: factoryLat, lng: factoryLng };
     const now = new Date();
 
-    const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
-    const inFactory = distance <= radiusMeters;
-
-    if (!inFactory) {
-        showNotification("คุณอยู่นอกโรงงาน ไม่สามารถเช็คอินได้");
-        return; // ❌ ยกเลิกการเช็คอิน
+    // ดึงค่า location จากฟอร์ม
+    let location = 'โรงงาน';
+    if (isOnsite) {
+        const locationInput = document.querySelector('#onsiteForm input');
+        location = locationInput ? locationInput.value.trim() || 'Onsite' : 'Onsite';
     }
 
-    const status = getCheckInStatus(now); // 🔹 status จริง
-    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คอิน', 'โรงงาน', status);
-    
-    // ปิดปุ่มเช็คอิน
+    if (!isOnsite) {
+        const { lat, lng } = lastPosition || { lat: factoryLat, lng: factoryLng };
+        const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
+        const inFactory = distance <= radiusMeters;
+
+        if (!inFactory) {
+            showNotification("คุณอยู่นอกโรงงาน ไม่สามารถเช็คอินได้");
+            return;
+        }
+    }
+
+    const status = getCheckInStatus(now);
+
+    // เพิ่ม record ลง TodayRecord และ Sheet
+    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คอิน', location, status);
+
+    // ปิด/เปิดปุ่มตามเดิม
     const checkinBtn = document.getElementById('checkinBtn');
     if (checkinBtn) {
         checkinBtn.disabled = true;
         checkinBtn.classList.add('opacity-50', 'cursor-not-allowed');
     }
 
-    // เปิดปุ่มเช็คเอาท์
     const checkoutBtn = document.getElementById('checkoutBtn');
     if (checkoutBtn) {
         checkoutBtn.disabled = false;
@@ -759,26 +761,37 @@ function checkIn() {
     google.script.run.withSuccessHandler(() => showNotification('เช็คอินสำเร็จ!'))
         .recordCheckIn(
             currentUser.displayName,
-            'โรงงาน',
+            location, // ส่ง location แทน workType
             'เช็คอิน',
-            status, // 🔹 ส่ง status จริงลง Sheet
+            status
         );
 }
 
+
 function checkOut() {
-    const { lat, lng } = lastPosition || { lat: factoryLat, longitude: factoryLng };
     const now = new Date();
+    const workType = isOnsite ? 'Onsite' : 'โรงงาน';
 
-    const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
-    const inFactory = distance <= radiusMeters;
 
-    if (!inFactory) {
-        showNotification("คุณอยู่นอกโรงงาน ไม่สามารถเช็คเอาท์ได้");
-        return;
+    let location = 'โรงงาน';
+    if (isOnsite) {
+        const locationInput = document.querySelector('#onsiteForm input');
+        location = locationInput ? locationInput.value.trim() || 'Onsite' : 'Onsite';
+    }
+
+    if (!isOnsite) {
+        const { lat, lng } = lastPosition || { lat: factoryLat, lng: factoryLng };
+        const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
+        const inFactory = distance <= radiusMeters;
+
+        if (!inFactory) {
+            showNotification("คุณอยู่นอกโรงงาน ไม่สามารถเช็คเอาท์ได้");
+            return;
+        }
     }
 
     const status = getCheckOutStatus(now);
-    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', 'โรงงาน', status);
+    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', workType, status);
 
     // ปิดปุ่มเช็คเอาท์
     const checkoutBtn = document.getElementById('checkoutBtn');
@@ -790,10 +803,13 @@ function checkOut() {
     google.script.run.withSuccessHandler(() => showNotification('เช็คเอาท์สำเร็จ!'))
         .recordCheckOut(
             currentUser.displayName,
-            'โรงงาน',
+            location,
             'เช็คเอาท์',
-            status,
+            status
         );
+
+    // หลังเช็คเอาท์เสร็จ → reset isOnsite
+    isOnsite = false;
 }
 
       document.addEventListener("DOMContentLoaded", () => {
