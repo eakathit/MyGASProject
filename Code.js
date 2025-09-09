@@ -40,32 +40,58 @@ function recordCheckIn(displayName, location, action, status) {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
 
     const now = new Date();
-    const thailandTime = Utilities.formatDate(now, "GMT+7", "yyyy-MM-dd HH:mm:ss");
+    const dateStr = Utilities.formatDate(now, "GMT+7", "dd/MM/yyyy"); // วัน
+    const timeStr = Utilities.formatDate(now, "GMT+7", "HH:mm:ss");   // เวลา
 
     sheet.appendRow([
-        displayName,
-        thailandTime,
-        location,
-        action,
-        status,
+        displayName,  // employeeId / ชื่อผู้ใช้
+        dateStr,      // วัน
+        timeStr,      // เวลา
+        location,     // โรงงาน / Onsite
+        action,       // เช็คอิน
+        status        // ปกติ/สาย/ออกก่อนเวลา
     ]);
     return true;
 }
 
 function recordCheckOut(displayName, location, action, status){
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
+  
+    const now = new Date();
+    const dateStr = Utilities.formatDate(now, "GMT+7", "dd/MM/yyyy"); // วัน
+    const timeStr = Utilities.formatDate(now, "GMT+7", "HH:mm:ss");   // เวลา
+  
+    sheet.appendRow([
+        displayName,
+        dateStr,
+        timeStr,
+        location,
+        action,
+        status
+    ]);
+    return true;
+}
+
+function getCheckStatus(employeeId) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
-  
-  const now = new Date();
-  const thailandTime = Utilities.formatDate(now, "GMT+7", "yyyy-MM-dd HH:mm:ss");
-  
-  sheet.appendRow ([
-    displayName,
-    thailandTime,
-    location,
-    action,
-    status
-  ]);
-  return true;
+  const data = sheet.getDataRange().getValues();
+  const today = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
+
+  let checkedIn = false;
+  let checkedOut = false;
+
+  for (let i = 1; i < data.length; i++) {
+    const rowEmployee = data[i][0];
+    const rowDate = data[i][1]; // วันใน Sheet
+    const rowAction = data[i][4];
+
+    if (rowEmployee === employeeId && rowDate === today) {
+      if (rowAction === "เช็คอิน") checkedIn = true;
+      if (rowAction === "เช็คเอาท์") checkedOut = true;
+    }
+  }
+
+  return { checkedIn, checkedOut };
 }
 
 

@@ -168,7 +168,7 @@
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">หมายเหตุ</label>
-                  <textarea class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 h-24" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></textarea>
+                  <textarea class="mb-2 w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 h-24" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></textarea>
                 </div>
               </div>
             </div>
@@ -215,7 +215,7 @@
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-3">
                                 <i data-feather="sunrise" class="w-4 h-4 inline mr-2"></i>
-                                แผนงานตอนเข้า (Check-in)
+                                แผนงานตอนเข้า (Daily Report)
                             </label>
               <textarea id="morningPlan" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 h-40" placeholder="ระบุแผนงานที่จะทำในวันนี้..."></textarea>
             </div>
@@ -224,7 +224,7 @@
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-3">
                                 <i data-feather="sunset" class="w-4 h-4 inline mr-2"></i>
-                                สรุปงานตอนออก (Check-out)
+                                สรุปงานตอนออก (Daily Report)
                             </label>
               <textarea id="eveningSummary" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 h-40" placeholder="สรุปงานที่ทำเสร็จในวันนี้..."></textarea>
             </div>
@@ -369,6 +369,7 @@
 
   <script>
     // โรงงาน
+      const employeeId = currentUser.displayName;
       const factoryLat = 13.6239;   // latitude โรงงาน 
       const factoryLng = 101.0255;  // longitude โรงงาน
       const radiusMeters = 300;     // tolerance เช่น 500m
@@ -631,7 +632,7 @@ function login(event) {
             document.getElementById('mainApp').classList.remove('hidden');
 
             // แสดงชื่อผู้ใช้
-            document.getElementById('currentUser').innerText = `พนักงาน: ${response.displayName}`;
+            document.getElementById('currentUser').innerText = `พนักงาน : ${response.displayName}`;
         } else {
             document.getElementById('error').innerText = 'รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง';
         }
@@ -742,6 +743,7 @@ function checkIn() {
 
     const status = getCheckInStatus(now);
 
+    updateButtons({checkedIn:true, checkedOut:false});
     // เพิ่ม record ลง TodayRecord และ Sheet
     addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คอิน', location, status);
 
@@ -770,15 +772,15 @@ function checkIn() {
 
 function checkOut() {
     const now = new Date();
-    const workType = isOnsite ? 'Onsite' : 'โรงงาน';
 
-
+    // ดึง location
     let location = 'โรงงาน';
     if (isOnsite) {
         const locationInput = document.querySelector('#onsiteForm input');
         location = locationInput ? locationInput.value.trim() || 'Onsite' : 'Onsite';
     }
 
+    // ตรวจสอบ GPS เฉพาะโรงงาน
     if (!isOnsite) {
         const { lat, lng } = lastPosition || { lat: factoryLat, lng: factoryLng };
         const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
@@ -790,10 +792,12 @@ function checkOut() {
         }
     }
 
+    // เพิ่ม record
     const status = getCheckOutStatus(now);
-    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', workType, status);
+    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', location, status);
 
-    // ปิดปุ่มเช็คเอาท์
+    updateButtons({checkedIn:true, checkedOut:false});
+    
     const checkoutBtn = document.getElementById('checkoutBtn');
     if (checkoutBtn) {
         checkoutBtn.disabled = true;
@@ -801,12 +805,7 @@ function checkOut() {
     }
 
     google.script.run.withSuccessHandler(() => showNotification('เช็คเอาท์สำเร็จ!'))
-        .recordCheckOut(
-            currentUser.displayName,
-            location,
-            'เช็คเอาท์',
-            status
-        );
+        .recordCheckOut(currentUser.displayName, location, 'เช็คเอาท์', status);
 
     // หลังเช็คเอาท์เสร็จ → reset isOnsite
     isOnsite = false;
@@ -815,7 +814,32 @@ function checkOut() {
       document.addEventListener("DOMContentLoaded", () => {
           feather.replace();
           startWatchingPosition(); // เริ่มติดตาม GPS เมื่อโหลดหน้า
+
+          // โหลดสถานะปุ่มตอนหน้าเว็บโหลด
+          google.script.run.withSuccessHandler(updateButtons).getCheckStatus(currentUser.displayName);
       });
+
+    function updateButtons(status) {
+    const checkinBtn = document.getElementById('checkinBtn');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+
+    if(status.checkedIn){
+        checkinBtn.disabled = true;
+        checkinBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        checkoutBtn.disabled = !status.checkedOut;
+        checkoutBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+    if(status.checkedOut){
+        checkoutBtn.disabled = true;
+        checkoutBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    if(!status.checkedIn && !status.checkedOut){
+        checkinBtn.disabled = false;
+        checkinBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        checkoutBtn.disabled = true;
+        checkoutBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+}
 
         // Add Today Record
     function addTodayRecord(time, type, location, status) {
