@@ -15,26 +15,35 @@ function include(filename) {
 
 // ฟังก์ชันตรวจสอบ login
 function checkLogin(username, password) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("employees");
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('employees'); // ชื่อ Sheet ต้องตรง
   const data = sheet.getDataRange().getValues();
 
-  for (let i = 1; i < data.length; i++) {
+  for (let i = 1; i < data.length; i++) { // ข้าม header
     const row = data[i];
-    if (row[0].toString().trim() === username.trim() && row[1].toString().trim() === password.trim()) {
-      return { success: true, username: row[0], employeeId: row[0], role: row[2] };
+    const sheetUsername = row[0].toString().trim().toLowerCase();
+    const sheetPassword = row[1].toString().trim();
+
+    if (sheetUsername === username.toLowerCase() && sheetPassword === password) {
+      return {
+        success: true,
+        username: row[0].trim(),
+        displayName: row[3].trim()
+      };
     }
   }
   return { success: false };
 }
 
-function recordCheckIn(employeeId, location, action, status) { 
+
+function recordCheckIn(displayName, location, action, status) { 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
 
     const now = new Date();
     const thailandTime = Utilities.formatDate(now, "GMT+7", "yyyy-MM-dd HH:mm:ss");
 
     sheet.appendRow([
-        employeeId,
+        displayName,
         thailandTime,
         location,
         action,
@@ -43,14 +52,14 @@ function recordCheckIn(employeeId, location, action, status) {
     return true;
 }
 
-function recordCheckOut(employeeId, location, action, status){
+function recordCheckOut(displayName, location, action, status){
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
   
   const now = new Date();
   const thailandTime = Utilities.formatDate(now, "GMT+7", "yyyy-MM-dd HH:mm:ss");
   
   sheet.appendRow ([
-    employeeId,
+    displayName,
     thailandTime,
     location,
     action,

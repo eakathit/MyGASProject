@@ -42,21 +42,21 @@
 
 <body class="bg-gray-50 min-h-screen">
   <!-- Navigation -->
-  <nav class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <h1 class="text-xl font-bold text-gray-900">ระบบลงเวลาเข้า-ออก</h1>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-600" id="currentUser">พนักงาน: สมชาย ใจดี</span>
-                    <button onclick="logout()" class="text-sm text-blue-600 hover:text-blue-800">ออกจากระบบ</button>
-                </div>
-            </div>
+  <nav id="mainNav" class="bg-white shadow-sm border-b border-gray-200 hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <h1 class="text-xl font-bold text-gray-900">ระบบลงเวลาเข้า-ออก</h1>
+          </div>
         </div>
-    </nav>
+        <div class="flex items-center space-x-4">
+          <span class="text-sm text-gray-600" id="currentUser">พนักงาน: สมชาย ใจดี</span>
+          <button onclick="logout()" class="text-sm text-blue-600 hover:text-blue-800">ออกจากระบบ</button>
+        </div>
+      </div>
+    </div>
+  </nav>
 
   <!-- Main Container -->
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -621,8 +621,8 @@ function stopWatchingPosition() {
             document.getElementById('currentDate').textContent = dateString;
         }
 
-        // Login Function
-        function login(event) {
+        // Login 
+function login(event) {
     event.preventDefault();
     const employeeId = document.getElementById('employeeId').value;
     const password = document.getElementById('password').value;
@@ -630,10 +630,16 @@ function stopWatchingPosition() {
     google.script.run.withSuccessHandler((response) => {
         if (response.success) {
             currentUser = response;
+
+            // ซ่อนหน้า login
             document.getElementById('loginPage').classList.add('hidden');
+
+            // แสดง nav + mainApp
+            document.getElementById('mainNav').classList.remove('hidden');
             document.getElementById('mainApp').classList.remove('hidden');
-            document.getElementById('currentUser').innerText = `พนักงาน: ${response.username}`;
-            showNotification("เข้าสู่ระบบสำเร็จ!");
+
+            // แสดงชื่อผู้ใช้
+            document.getElementById('currentUser').innerText = `พนักงาน: ${response.displayName}`;
         } else {
             document.getElementById('error').innerText = 'รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง';
         }
@@ -642,11 +648,17 @@ function stopWatchingPosition() {
 
     function logout() {
     currentUser = null;
+
+    // ซ่อน nav + mainApp
+    document.getElementById('mainNav').classList.add('hidden');
     document.getElementById('mainApp').classList.add('hidden');
+
+    // แสดง login page
     document.getElementById('loginPage').classList.remove('hidden');
+
+    // ล้างชื่อผู้ใช้
     document.getElementById('currentUser').innerText = '';
 }
-
     // Tab Navigation
     function showTab(tabName) {
     // ซ่อนทุก tab content
@@ -738,7 +750,7 @@ function checkIn() {
 
     google.script.run.withSuccessHandler(() => showNotification('เช็คอินสำเร็จ!'))
         .recordCheckIn(
-            currentUser.employeeId,
+            currentUser.displayName,
             'โรงงาน',
             'เช็คอิน',
             status, // 🔹 ส่ง status จริงลง Sheet
@@ -761,7 +773,7 @@ function checkOut() {
 
     google.script.run.withSuccessHandler(() => showNotification('เช็คเอาท์สำเร็จ!'))
         .recordCheckOut(
-            currentUser.employeeId,
+            currentUser.displayName,
             'โรงงาน',
             'เช็คเอาท์',
             status,
