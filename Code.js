@@ -35,34 +35,16 @@ function checkLogin(username, password) {
   return { success: false };
 }
 
-
-function recordCheckIn(displayName, location, action, status) { 
+function recordCheckIn(user, displayName, location, action, status) { 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
 
     const now = new Date();
-    const dateStr = Utilities.formatDate(now, "GMT+7", "dd/MM/yyyy"); // วัน
-    const timeStr = Utilities.formatDate(now, "GMT+7", "HH:mm:ss");   // เวลา
+    const dateStr = Utilities.formatDate(now, "GMT+7", "dd/MM/yyyy");
+    const timeStr = Utilities.formatDate(now, "GMT+7", "HH:mm:ss");
 
     sheet.appendRow([
-        displayName,  // employeeId / ชื่อผู้ใช้
-        dateStr,      // วัน
-        timeStr,      // เวลา
-        location,     // โรงงาน / Onsite
-        action,       // เช็คอิน
-        status        // ปกติ/สาย/ออกก่อนเวลา
-    ]);
-    return true;
-}
-
-function recordCheckOut(displayName, location, action, status){
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
-  
-    const now = new Date();
-    const dateStr = Utilities.formatDate(now, "GMT+7", "dd/MM/yyyy"); // วัน
-    const timeStr = Utilities.formatDate(now, "GMT+7", "HH:mm:ss");   // เวลา
-  
-    sheet.appendRow([
-        displayName,
+        user,         // User
+        displayName,  // displayName
         dateStr,
         timeStr,
         location,
@@ -72,7 +54,26 @@ function recordCheckOut(displayName, location, action, status){
     return true;
 }
 
-function getCheckStatus(employeeId) {
+function recordCheckOut(user, displayName, location, action, status) {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
+
+    const now = new Date();
+    const dateStr = Utilities.formatDate(now, "GMT+7", "dd/MM/yyyy");
+    const timeStr = Utilities.formatDate(now, "GMT+7", "HH:mm:ss");
+
+    sheet.appendRow([
+        user,         // User
+        displayName,  // displayName
+        dateStr,
+        timeStr,
+        location,
+        action,
+        status
+    ]);
+    return true;
+}
+
+function getCheckStatus(user) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
   const data = sheet.getDataRange().getValues();
   const today = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
@@ -81,11 +82,11 @@ function getCheckStatus(employeeId) {
   let checkedOut = false;
 
   for (let i = 1; i < data.length; i++) {
-    const rowEmployee = data[i][0];
-    const rowDate = data[i][1]; // วันใน Sheet
-    const rowAction = data[i][4];
+    const rowUser = data[i][0];   // column User
+    const rowDate = data[i][2];   // วัน (ถ้า column 2 = date)
+    const rowAction = data[i][5]; // action
 
-    if (rowEmployee === employeeId && rowDate === today) {
+    if (rowUser === user && rowDate === today) {
       if (rowAction === "เช็คอิน") checkedIn = true;
       if (rowAction === "เช็คเอาท์") checkedOut = true;
     }
@@ -93,7 +94,3 @@ function getCheckStatus(employeeId) {
 
   return { checkedIn, checkedOut };
 }
-
-
-
-

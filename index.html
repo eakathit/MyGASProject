@@ -761,12 +761,13 @@ function checkIn() {
     }
 
     google.script.run.withSuccessHandler(() => showNotification('เช็คอินสำเร็จ!'))
-        .recordCheckIn(
-            currentUser.displayName,
-            location, // ส่ง location แทน workType
-            'เช็คอิน',
-            status
-        );
+      .recordCheckIn(
+        currentUser.username,    // ส่ง User
+        currentUser.displayName, // ส่ง displayName
+        location,
+        'เช็คอิน',
+        status
+    );
 }
 
 
@@ -805,7 +806,13 @@ function checkOut() {
     }
 
     google.script.run.withSuccessHandler(() => showNotification('เช็คเอาท์สำเร็จ!'))
-        .recordCheckOut(currentUser.displayName, location, 'เช็คเอาท์', status);
+      .recordCheckOut(
+        currentUser.username,    // ส่ง User
+        currentUser.displayName, // ส่ง displayName
+        location,
+        'เช็คเอาท์',
+        status
+    );
 
     // หลังเช็คเอาท์เสร็จ → reset isOnsite
     isOnsite = false;
@@ -948,5 +955,4 @@ function checkOut() {
         });
   </script>
 </body>
-
 </html>

@@ -1,6 +1,5 @@
 {
   "timeZone": "Asia/Bangkok",
-  "dependencies": {},
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "webapp": {
