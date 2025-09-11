@@ -14,66 +14,62 @@ function include(filename) {
 }
 
 // ฟังก์ชันตรวจสอบ login
-function checkLogin(username, password) {
+function checkLogin(username, password) { 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('employees'); // ชื่อ Sheet ต้องตรง
   const data = sheet.getDataRange().getValues();
 
   for (let i = 1; i < data.length; i++) { // ข้าม header
     const row = data[i];
-    const sheetUsername = row[0].toString().trim().toLowerCase();
-    const sheetPassword = row[1].toString().trim();
+    const sheetUsername = row[0].toString().trim().toLowerCase(); // User
+    const sheetPassword = row[1].toString().trim();               // Password
 
     if (sheetUsername === username.toLowerCase() && sheetPassword === password) {
       return {
         success: true,
-        username: row[0].trim(),
-        displayName: row[3].trim()
+        user: row[0].toString().trim(),        // ส่ง User กลับมา
+        displayName: row[3].toString().trim(), // ส่ง DisplayName กลับมา (ตรวจสอบ index ให้ตรงชีท)
+        role: row[2] ? row[2].toString().trim() : "" // เผื่อใช้ role ภายหลัง
       };
     }
   }
   return { success: false };
 }
 
-function recordCheckIn(user, displayName, location, action, status) { 
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
 
-    const now = new Date();
-    const dateStr = Utilities.formatDate(now, "GMT+7", "dd/MM/yyyy");
-    const timeStr = Utilities.formatDate(now, "GMT+7", "HH:mm:ss");
-
-    sheet.appendRow([
-        user,         // User
-        displayName,  // displayName
-        dateStr,
-        timeStr,
-        location,
-        action,
-        status
-    ]);
-    return true;
+function recordCheckIn(user, displayName, location, action, status) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
+  const now = new Date();
+  
+  sheet.appendRow([
+    user,
+    displayName,
+    Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd"), // ✅ บันทึกวันที่
+    Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss"),   // ✅ บันทึกเวลา
+    location,
+    action,
+    status
+  ]);
 }
+
 
 function recordCheckOut(user, displayName, location, action, status) {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
-
-    const now = new Date();
-    const dateStr = Utilities.formatDate(now, "GMT+7", "dd/MM/yyyy");
-    const timeStr = Utilities.formatDate(now, "GMT+7", "HH:mm:ss");
-
-    sheet.appendRow([
-        user,         // User
-        displayName,  // displayName
-        dateStr,
-        timeStr,
-        location,
-        action,
-        status
-    ]);
-    return true;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
+  const now = new Date();
+  
+  sheet.appendRow([
+    user,
+    displayName,
+    Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd"),
+    Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss"),
+    location,
+    action,
+    status
+  ]);
 }
 
-function getCheckStatus(user) {
+
+function getCheckStatus(employeeId) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
   const data = sheet.getDataRange().getValues();
   const today = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy");
@@ -82,15 +78,30 @@ function getCheckStatus(user) {
   let checkedOut = false;
 
   for (let i = 1; i < data.length; i++) {
-    const rowUser = data[i][0];   // column User
-    const rowDate = data[i][2];   // วัน (ถ้า column 2 = date)
-    const rowAction = data[i][5]; // action
+    const rowEmployee = data[i][0];
+    const rowDate = data[i][1]; // วันใน Sheet
+    const rowAction = data[i][4];
 
-    if (rowUser === user && rowDate === today) {
+    if (rowEmployee === employeeId && rowDate === today) {
       if (rowAction === "เช็คอิน") checkedIn = true;
       if (rowAction === "เช็คเอาท์") checkedOut = true;
     }
   }
-
   return { checkedIn, checkedOut };
+}
+
+function submitDailyReport(user, displayName, morningPlan, eveningSummary) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("DailyReport");
+  const now = new Date();
+  
+  // เพิ่มข้อมูลลง sheet
+  sheet.appendRow([
+    Utilities.formatDate(now, "Asia/Bangkok", "dd-MM-yyyy"), 
+    user,     
+    displayName,
+    morningPlan,
+    eveningSummary
+  ]);
+  
+  return "บันทึกเรียบร้อยแล้ว!";
 }

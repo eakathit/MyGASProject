@@ -215,7 +215,7 @@
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-3">
                                 <i data-feather="sunrise" class="w-4 h-4 inline mr-2"></i>
-                                แผนงานตอนเข้า (Daily Report)
+                                แผนงานตอนเข้า (Check-in)
                             </label>
               <textarea id="morningPlan" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 h-40" placeholder="ระบุแผนงานที่จะทำในวันนี้..."></textarea>
             </div>
@@ -224,7 +224,7 @@
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-3">
                                 <i data-feather="sunset" class="w-4 h-4 inline mr-2"></i>
-                                สรุปงานตอนออก (Daily Report)
+                                สรุปงานตอนออก (Check-out)
                             </label>
               <textarea id="eveningSummary" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 h-40" placeholder="สรุปงานที่ทำเสร็จในวันนี้..."></textarea>
             </div>
@@ -368,15 +368,15 @@
   </div>
 
   <script>
-    // โรงงาน
-      const employeeId = currentUser.displayName;
-      const factoryLat = 13.6239;   // latitude โรงงาน 
-      const factoryLng = 101.0255;  // longitude โรงงาน
-      const radiusMeters = 300;     // tolerance เช่น 500m
-
+      let currentUser = null;
+      let isOnsite = false;
       let lastPositions = [];
       let lastPosition = null;
-      let isOnsite = false;
+
+      // ค่าคงที่
+      const factoryLat = 13.6239;
+      const factoryLng = 101.0255;
+      const radiusMeters = 200;
 
       // ฟังก์ชันช่วยคำนวณระยะทาง
       function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
@@ -462,7 +462,7 @@ function handleGPSError() {
 
     if (!gpsMessage || !gpsDistance || !gpsIcon || !gpsCard) return;
 
-    gpsMessage.textContent = "ไม่สามารถดึงตำแหน่งได้";
+    gpsMessage.textContent = "ไม่สามารถดึงตำแหน่งได้ รอโปรดสักครู่";
     gpsDistance.textContent = "--";
 
     gpsCard.firstElementChild.className = "flex items-center justify-between p-4 rounded-xl border bg-yellow-50 border-yellow-200";
@@ -503,6 +503,7 @@ function startWatchingPosition() {
 document.addEventListener("DOMContentLoaded", () => {
     feather.replace();
     startWatchingPosition();
+    google.script.run.withSuccessHandler(updateButtons).getCheckStatus(currentUser.user);
 });
 
   // เรียกดู GPS ทันที
@@ -615,31 +616,31 @@ function stopWatchingPosition() {
         }
 
         // Login 
-function login(event) {
+  function login(event) {
     event.preventDefault();
-    const employeeId = document.getElementById('employeeId').value;
-    const password = document.getElementById('password').value;
+    const employeeId = document.getElementById('employeeId').value.trim();
+    const password = document.getElementById('password').value.trim();
 
     google.script.run.withSuccessHandler((response) => {
-        if (response.success) {
-            currentUser = response;
+      if (response.success) {
+        currentUser = response; // {success:true, user:"Aum", displayName:"เอกอาทิตย์", role:"Admin"}
 
-            // ซ่อนหน้า login
-            document.getElementById('loginPage').classList.add('hidden');
+        // ซ่อนหน้า login
+        document.getElementById('loginPage').classList.add('hidden');
 
-            // แสดง nav + mainApp
-            document.getElementById('mainNav').classList.remove('hidden');
-            document.getElementById('mainApp').classList.remove('hidden');
+        // แสดง nav + mainApp
+        document.getElementById('mainNav').classList.remove('hidden');
+        document.getElementById('mainApp').classList.remove('hidden');
 
-            // แสดงชื่อผู้ใช้
-            document.getElementById('currentUser').innerText = `พนักงาน : ${response.displayName}`;
-        } else {
-            document.getElementById('error').innerText = 'รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง';
-        }
+        // แสดงชื่อผู้ใช้
+        document.getElementById('currentUser').innerText = `พนักงาน : ${currentUser.displayName}`;
+      } else {
+        document.getElementById('error').innerText = 'รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง';
+      }
     }).checkLogin(employeeId, password);
-}
+  }
 
-    function logout() {
+  function logout() {
     currentUser = null;
 
     // ซ่อน nav + mainApp
@@ -651,7 +652,7 @@ function login(event) {
 
     // ล้างชื่อผู้ใช้
     document.getElementById('currentUser').innerText = '';
-}
+  }
     // Tab Navigation
     function showTab(tabName) {
     // ซ่อนทุก tab content
@@ -720,132 +721,120 @@ function getCheckOutStatus(now) {
 }
 
 // Check In
+// ==================== Check In ====================
 function checkIn() {
-    const now = new Date();
+  if (!currentUser) {
+    showNotification("กรุณา login ก่อนทำการเช็คอิน");
+    return;
+  }
 
-    // ดึงค่า location จากฟอร์ม
-    let location = 'โรงงาน';
-    if (isOnsite) {
-        const locationInput = document.querySelector('#onsiteForm input');
-        location = locationInput ? locationInput.value.trim() || 'Onsite' : 'Onsite';
+  const now = new Date();
+
+  // ดึงค่า location จากฟอร์ม
+  let location = 'โรงงาน';
+  if (isOnsite) {
+    const locationInput = document.querySelector('#onsiteForm input');
+    location = locationInput ? locationInput.value.trim() || 'Onsite' : 'Onsite';
+  }
+
+  // ตรวจสอบ GPS เฉพาะโรงงาน
+  if (!isOnsite) {
+    const { lat, lng } = lastPosition || { lat: factoryLat, lng: factoryLng };
+    const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
+    if (distance > radiusMeters) {
+      showNotification("คุณอยู่นอกโรงงาน ไม่สามารถเช็คอินได้");
+      return;
     }
+  }
 
-    if (!isOnsite) {
-        const { lat, lng } = lastPosition || { lat: factoryLat, lng: factoryLng };
-        const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
-        const inFactory = distance <= radiusMeters;
+  const status = getCheckInStatus(now);
 
-        if (!inFactory) {
-            showNotification("คุณอยู่นอกโรงงาน ไม่สามารถเช็คอินได้");
-            return;
-        }
-    }
+  // อัปเดตปุ่มทันที
+  updateButtons({ checkedIn: true, checkedOut: false });
 
-    const status = getCheckInStatus(now);
+  // เพิ่ม record ลง TodayRecord (ถ้ามี)
+  addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คอิน', location, status);
 
-    updateButtons({checkedIn:true, checkedOut:false});
-    // เพิ่ม record ลง TodayRecord และ Sheet
-    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คอิน', location, status);
-
-    // ปิด/เปิดปุ่มตามเดิม
-    const checkinBtn = document.getElementById('checkinBtn');
-    if (checkinBtn) {
-        checkinBtn.disabled = true;
-        checkinBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    }
-
-    const checkoutBtn = document.getElementById('checkoutBtn');
-    if (checkoutBtn) {
-        checkoutBtn.disabled = false;
-        checkoutBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    }
-
-    google.script.run.withSuccessHandler(() => showNotification('เช็คอินสำเร็จ!'))
-      .recordCheckIn(
-        currentUser.username,    // ส่ง User
-        currentUser.displayName, // ส่ง displayName
-        location,
-        'เช็คอิน',
-        status
-    );
+  // ส่งไปบันทึกลง Google Sheet
+  google.script.run.withSuccessHandler(() => showNotification('เช็คอินสำเร็จ!'))
+    .recordCheckIn(currentUser.user, currentUser.displayName, location, 'in', status);
 }
 
-
+// ==================== Check Out ====================
 function checkOut() {
-    const now = new Date();
+  if (!currentUser) {
+    showNotification("กรุณา login ก่อนทำการเช็คเอาท์");
+    return;
+  }
 
-    // ดึง location
-    let location = 'โรงงาน';
-    if (isOnsite) {
-        const locationInput = document.querySelector('#onsiteForm input');
-        location = locationInput ? locationInput.value.trim() || 'Onsite' : 'Onsite';
+  const now = new Date();
+
+  // ดึงค่า location จากฟอร์ม
+  let location = 'โรงงาน';
+  if (isOnsite) {
+    const locationInput = document.querySelector('#onsiteForm input');
+    location = locationInput ? locationInput.value.trim() || 'Onsite' : 'Onsite';
+  }
+
+  // ตรวจสอบ GPS เฉพาะโรงงาน
+  if (!isOnsite) {
+    const { lat, lng } = lastPosition || { lat: factoryLat, lng: factoryLng };
+    const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
+    if (distance > radiusMeters) {
+      showNotification("คุณอยู่นอกโรงงาน ไม่สามารถเช็คเอาท์ได้");
+      return;
     }
+  }
 
-    // ตรวจสอบ GPS เฉพาะโรงงาน
-    if (!isOnsite) {
-        const { lat, lng } = lastPosition || { lat: factoryLat, lng: factoryLng };
-        const distance = getDistanceFromLatLonInMeters(lat, lng, factoryLat, factoryLng);
-        const inFactory = distance <= radiusMeters;
+  const status = getCheckOutStatus(now);
 
-        if (!inFactory) {
-            showNotification("คุณอยู่นอกโรงงาน ไม่สามารถเช็คเอาท์ได้");
-            return;
-        }
-    }
+  // อัปเดตปุ่มทันที
+  updateButtons({ checkedIn: true, checkedOut: true });
 
-    // เพิ่ม record
-    const status = getCheckOutStatus(now);
-    addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', location, status);
+  // เพิ่ม record ลง TodayRecord (ถ้ามี)
+  addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', location, status);
 
-    updateButtons({checkedIn:true, checkedOut:false});
-    
-    const checkoutBtn = document.getElementById('checkoutBtn');
-    if (checkoutBtn) {
-        checkoutBtn.disabled = true;
-        checkoutBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    }
+  // ส่งไปบันทึกลง Google Sheet
+  google.script.run.withSuccessHandler(() => showNotification('เช็คเอาท์สำเร็จ!'))
+    .recordCheckOut(currentUser.user, currentUser.displayName, location, 'out', status);
 
-    google.script.run.withSuccessHandler(() => showNotification('เช็คเอาท์สำเร็จ!'))
-      .recordCheckOut(
-        currentUser.username,    // ส่ง User
-        currentUser.displayName, // ส่ง displayName
-        location,
-        'เช็คเอาท์',
-        status
-    );
-
-    // หลังเช็คเอาท์เสร็จ → reset isOnsite
-    isOnsite = false;
+  // รีเซ็ต isOnsite
+  isOnsite = false;
 }
 
-      document.addEventListener("DOMContentLoaded", () => {
-          feather.replace();
-          startWatchingPosition(); // เริ่มติดตาม GPS เมื่อโหลดหน้า
+// ==================== Update Buttons ====================
+function updateButtons(status) {
+  const checkinBtn = document.getElementById('checkinBtn');
+  const checkoutBtn = document.getElementById('checkoutBtn');
 
-          // โหลดสถานะปุ่มตอนหน้าเว็บโหลด
-          google.script.run.withSuccessHandler(updateButtons).getCheckStatus(currentUser.displayName);
-      });
+  // ถ้าวันใหม่ หรือยังไม่เคยเช็คอิน → รีเซ็ตปุ่ม
+  const todayStr = new Date().toLocaleDateString('th-TH');
+  if (status.lastActionDate) {
+    const lastDateStr = new Date(status.lastActionDate).toLocaleDateString('th-TH');
+    if (lastDateStr !== todayStr) {
+      status.checkedIn = false;
+      status.checkedOut = false;
+    }
+  }
 
-    function updateButtons(status) {
-    const checkinBtn = document.getElementById('checkinBtn');
-    const checkoutBtn = document.getElementById('checkoutBtn');
+  // ปรับปุ่มเช็คอิน
+  if (status.checkedIn) {
+    checkinBtn.disabled = true;
+    checkinBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    checkoutBtn.disabled = false;
+    checkoutBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+  } else {
+    checkinBtn.disabled = false;
+    checkinBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    checkoutBtn.disabled = true;
+    checkoutBtn.classList.add('opacity-50', 'cursor-not-allowed');
+  }
 
-    if(status.checkedIn){
-        checkinBtn.disabled = true;
-        checkinBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        checkoutBtn.disabled = !status.checkedOut;
-        checkoutBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    }
-    if(status.checkedOut){
-        checkoutBtn.disabled = true;
-        checkoutBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    }
-    if(!status.checkedIn && !status.checkedOut){
-        checkinBtn.disabled = false;
-        checkinBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        checkoutBtn.disabled = true;
-        checkoutBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    }
+  // ปรับปุ่มเช็คเอาท์
+  if (status.checkedOut) {
+    checkoutBtn.disabled = true;
+    checkoutBtn.classList.add('opacity-50', 'cursor-not-allowed');
+  }
 }
 
         // Add Today Record
@@ -895,22 +884,35 @@ function checkOut() {
 
         // Save Draft Report
         function saveDraft() {
-            showNotification('บันทึกแบบร่างสำเร็จ!');
-        }
-        // Submit Report
-        function submitReport() {
-            const morningPlan = document.getElementById('morningPlan').value;
-            const eveningSummary = document.getElementById('eveningSummary').value;
-            
-            if (morningPlan || eveningSummary) {
-                showNotification('ส่งรายงานสำเร็จ!');
-                // Clear form
-                document.getElementById('morningPlan').value = '';
-                document.getElementById('eveningSummary').value = '';
-            } else {
-                showNotification('กรุณากรอกข้อมูลรายงาน');
-            }
-        }
+    showNotification('บันทึกแบบร่างสำเร็จ! (ยังไม่ได้เก็บใน Sheet)');
+  }
+
+  function submitReport() {
+    const morningPlan = document.getElementById('morningPlan').value.trim();
+    const eveningSummary = document.getElementById('eveningSummary').value.trim();
+
+    if (!morningPlan && !eveningSummary) {
+      showNotification('กรุณากรอกข้อมูลรายงาน');
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        showNotification(msg);
+        document.getElementById('morningPlan').value = '';
+        document.getElementById('eveningSummary').value = '';
+      })
+      .withFailureHandler(function (err) {
+        showNotification('เกิดข้อผิดพลาด: ' + err.message);
+      })
+      // ส่ง user + displayName ไปด้วย
+      .submitDailyReport(
+        currentUser.user,
+        currentUser.displayName,
+        morningPlan,
+        eveningSummary
+      );
+  }
 
         // Apply Filter
         function applyFilter() {
@@ -949,10 +951,10 @@ function checkOut() {
             // Show login page initially
             document.getElementById('loginPage').classList.remove('hidden');
             document.getElementById('mainApp').classList.add('hidden');
-            
             // Initialize icons
             feather.replace();
         });
   </script>
 </body>
+
 </html>
