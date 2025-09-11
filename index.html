@@ -368,7 +368,7 @@
   </div>
 
   <script>
-      let currentUser = null;
+    let currentUser = null;
       let isOnsite = false;
       let lastPositions = [];
       let lastPosition = null;
@@ -640,19 +640,45 @@ function stopWatchingPosition() {
     }).checkLogin(employeeId, password);
   }
 
-  function logout() {
-    currentUser = null;
+function logout() {
+  // ล้างข้อมูลผู้ใช้
+  currentUser = null;
 
-    // ซ่อน nav + mainApp
-    document.getElementById('mainNav').classList.add('hidden');
-    document.getElementById('mainApp').classList.add('hidden');
+  // ซ่อน nav + mainApp
+  document.getElementById('mainNav').classList.add('hidden');
+  document.getElementById('mainApp').classList.add('hidden');
 
-    // แสดง login page
-    document.getElementById('loginPage').classList.remove('hidden');
+  // แสดง login page
+  document.getElementById('loginPage').classList.remove('hidden');
 
-    // ล้างชื่อผู้ใช้
-    document.getElementById('currentUser').innerText = '';
+  // ล้างชื่อผู้ใช้
+  document.getElementById('currentUser').innerText = '';
+
+  // รีเซ็ตปุ่มเช็คอิน/เช็คเอาท์
+  updateButtons({ checkedIn: false, checkedOut: false });
+
+  // ล้างค่า Onsite form
+  const locationInput = document.querySelector('#onsiteForm input');
+  if (locationInput) locationInput.value = '';
+  const remarkInput = document.querySelector('#onsiteForm textarea');
+  if (remarkInput) remarkInput.value = '';
+
+  // ซ่อน form Onsite
+  const onsiteForm = document.getElementById('onsiteForm');
+  if (onsiteForm && !onsiteForm.classList.contains('hidden')) {
+    onsiteForm.classList.add('hidden');
   }
+
+  // รีเซ็ต isOnsite
+  isOnsite = false;
+
+  // 🔹 ล้างตาราง TodayRecord
+  const tbody = document.getElementById('todayRecords');
+  if (tbody) {
+    tbody.innerHTML = ''; // ลบกิจกรรมเก่า
+  }
+}
+
     // Tab Navigation
     function showTab(tabName) {
     // ซ่อนทุก tab content
@@ -721,7 +747,6 @@ function getCheckOutStatus(now) {
 }
 
 // Check In
-// ==================== Check In ====================
 function checkIn() {
   if (!currentUser) {
     showNotification("กรุณา login ก่อนทำการเช็คอิน");
@@ -736,6 +761,10 @@ function checkIn() {
     const locationInput = document.querySelector('#onsiteForm input');
     location = locationInput ? locationInput.value.trim() || 'Onsite' : 'Onsite';
   }
+
+  // ดึงค่า remark จาก textarea
+  const remarkInput = document.querySelector('#onsiteForm textarea');
+  const remark = remarkInput ? remarkInput.value.trim() : '';
 
   // ตรวจสอบ GPS เฉพาะโรงงาน
   if (!isOnsite) {
@@ -753,14 +782,13 @@ function checkIn() {
   updateButtons({ checkedIn: true, checkedOut: false });
 
   // เพิ่ม record ลง TodayRecord (ถ้ามี)
-  addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คอิน', location, status);
+  addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คอิน', location, status, remark);
 
   // ส่งไปบันทึกลง Google Sheet
   google.script.run.withSuccessHandler(() => showNotification('เช็คอินสำเร็จ!'))
-    .recordCheckIn(currentUser.user, currentUser.displayName, location, 'in', status);
+    .recordCheckIn(currentUser.user, currentUser.displayName, location, 'in', status, remark);
 }
 
-// ==================== Check Out ====================
 function checkOut() {
   if (!currentUser) {
     showNotification("กรุณา login ก่อนทำการเช็คเอาท์");
@@ -775,6 +803,10 @@ function checkOut() {
     const locationInput = document.querySelector('#onsiteForm input');
     location = locationInput ? locationInput.value.trim() || 'Onsite' : 'Onsite';
   }
+
+  // ดึงค่า remark จาก textarea
+  const remarkInput = document.querySelector('#onsiteForm textarea');
+  const remark = remarkInput ? remarkInput.value.trim() : '';
 
   // ตรวจสอบ GPS เฉพาะโรงงาน
   if (!isOnsite) {
@@ -792,17 +824,17 @@ function checkOut() {
   updateButtons({ checkedIn: true, checkedOut: true });
 
   // เพิ่ม record ลง TodayRecord (ถ้ามี)
-  addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', location, status);
+  addTodayRecord(now.toLocaleTimeString('th-TH'), 'เช็คเอาท์', location, status, remark);
 
   // ส่งไปบันทึกลง Google Sheet
   google.script.run.withSuccessHandler(() => showNotification('เช็คเอาท์สำเร็จ!'))
-    .recordCheckOut(currentUser.user, currentUser.displayName, location, 'out', status);
+    .recordCheckOut(currentUser.user, currentUser.displayName, location, 'out', status, remark);
 
   // รีเซ็ต isOnsite
   isOnsite = false;
 }
 
-// ==================== Update Buttons ====================
+// Update Buttons
 function updateButtons(status) {
   const checkinBtn = document.getElementById('checkinBtn');
   const checkoutBtn = document.getElementById('checkoutBtn');

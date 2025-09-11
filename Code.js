@@ -36,38 +36,33 @@ function checkLogin(username, password) {
   return { success: false };
 }
 
-
-function recordCheckIn(user, displayName, location, action, status) {
+function recordCheckIn(user, displayName, location, action, status, remark) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
-  const now = new Date();
-  
   sheet.appendRow([
     user,
     displayName,
-    Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd"), // ✅ บันทึกวันที่
-    Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss"),   // ✅ บันทึกเวลา
+    Utilities.formatDate(new Date(), 'GMT+7', 'yyyy-MM-dd'), // วันที่
+    Utilities.formatDate(new Date(), 'GMT+7', 'HH:mm:ss'),    // เวลา
     location,
     action,
-    status
+    status,
+    remark
   ]);
 }
 
-
-function recordCheckOut(user, displayName, location, action, status) {
+function recordCheckOut(user, displayName, location, action, status, remark) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
-  const now = new Date();
-  
   sheet.appendRow([
     user,
     displayName,
-    Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd"),
-    Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss"),
+    Utilities.formatDate(new Date(), 'GMT+7', 'yyyy-MM-dd'), // วันที่
+    Utilities.formatDate(new Date(), 'GMT+7', 'HH:mm:ss'),    // เวลา
     location,
     action,
-    status
+    status,
+    remark
   ]);
 }
-
 
 function getCheckStatus(employeeId) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CheckInLog");
@@ -93,7 +88,6 @@ function getCheckStatus(employeeId) {
 function submitDailyReport(user, displayName, morningPlan, eveningSummary) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("DailyReport");
   const now = new Date();
-  
   // เพิ่มข้อมูลลง sheet
   sheet.appendRow([
     Utilities.formatDate(now, "Asia/Bangkok", "dd-MM-yyyy"), 
