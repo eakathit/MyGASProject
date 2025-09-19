@@ -8,6 +8,7 @@ function doGet() {
 function getPage(pageName) {
   return HtmlService.createHtmlOutputFromFile(pageName).getContent();
 }
+
 // helper สำหรับ include
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
@@ -41,7 +42,7 @@ function recordCheckIn(user, displayName, location, action, status, remark) {
   sheet.appendRow([
     user,
     displayName,
-    Utilities.formatDate(new Date(), 'GMT+7', 'yyyy-MM-dd'), // วันที่
+    Utilities.formatDate(new Date(), 'GMT+7', 'dd/MM/yyyy'), // วันที่
     Utilities.formatDate(new Date(), 'GMT+7', 'HH:mm:ss'),    // เวลา
     location,
     action,
@@ -55,7 +56,7 @@ function recordCheckOut(user, displayName, location, action, status, remark) {
   sheet.appendRow([
     user,
     displayName,
-    Utilities.formatDate(new Date(), 'GMT+7', 'yyyy-MM-dd'), // วันที่
+    Utilities.formatDate(new Date(), 'GMT+7', 'dd/MM/yyyy'), // วันที่
     Utilities.formatDate(new Date(), 'GMT+7', 'HH:mm:ss'),    // เวลา
     location,
     action,
@@ -90,7 +91,7 @@ function submitDailyReport(user, displayName, morningPlan, eveningSummary) {
   const now = new Date();
   // เพิ่มข้อมูลลง sheet
   sheet.appendRow([
-    Utilities.formatDate(now, "Asia/Bangkok", "dd-MM-yyyy"), 
+    Utilities.formatDate(now, "Asia/Bangkok", "dd/MM/yyyy"), 
     user,     
     displayName,
     morningPlan,
